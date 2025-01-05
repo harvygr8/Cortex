@@ -6,6 +6,7 @@ import useProjectStore from '../../lib/stores/projectStore';
 import useThemeStore from '../../lib/stores/themeStore';
 import Breadcrumb from '../components/Breadcrumb';
 import Loader from '../components/Loader';
+import ChatLoader from '../components/ChatLoader';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
@@ -66,6 +67,9 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
+    
+    // Add temporary loading message
+    setMessages(prev => [...prev, { type: 'loading' }]);
 
     try {
       const response = await fetch('/api/chat', {
@@ -82,28 +86,26 @@ export default function ChatPage() {
       }
       
       const data = await response.json();
-      console.log('[Frontend] Received response:', data);
-      console.log('[Frontend] Response structure:', Object.keys(data));
-
+      
       if (data.error) {
-        console.log('[Frontend] Error detected:', data.error);
         throw new Error(data.error);
       }
 
       const messageContent = data.answer || 'No response received';
-      console.log('[Frontend] Final message content:', messageContent);
-
-      setMessages(prev => [...prev, { 
-        type: 'assistant', 
+      
+      // Remove loading message and add AI response
+      setMessages(prev => prev.filter(msg => msg.type !== 'loading').concat({
+        type: 'assistant',
         content: messageContent
-      }]);
+      }));
 
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages(prev => [...prev, { 
-        type: 'assistant', 
-        content: 'Sorry, there was an error processing your question.' 
-      }]);
+      // Remove loading message and add error message
+      setMessages(prev => prev.filter(msg => msg.type !== 'loading').concat({
+        type: 'assistant',
+        content: 'Sorry, there was an error processing your question.'
+      }));
     } finally {
       setLoading(false);
     }
@@ -157,15 +159,19 @@ export default function ChatPage() {
             key={index}
             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                message.type === 'user'
-                  ? `${theme.dark.primary} text-white`
-                  : `${isDarkMode ? theme.dark.background : theme.light.background} ${isDarkMode ? theme.dark.text : theme.light.text}`
-              }`}
-            >
-              {message.content}
-            </div>
+            {message.type === 'loading' ? (
+              <ChatLoader />
+            ) : (
+              <div
+                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                  message.type === 'user'
+                    ? `${theme.dark.primary} text-white`
+                    : `${isDarkMode ? theme.dark.background : theme.light.background} ${isDarkMode ? theme.dark.text : theme.light.text}`
+                }`}
+              >
+                {message.content}
+              </div>
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />
@@ -187,11 +193,11 @@ export default function ChatPage() {
         <button
           type="submit"
           disabled={loading}
-          className={`px-4 py-2 rounded-lg disabled:opacity-50 ${
+          className={`px-4 py-2 rounded-lg transition-opacity ${
             isDarkMode ? theme.dark.primary : theme.light.primary
-          } ${isDarkMode ? theme.dark.hover.primary : theme.light.hover.primary}`}
+          } ${isDarkMode ? theme.dark.hover.primary : theme.light.hover.primary} disabled:opacity-40`}
         >
-          {loading ? 'Sending...' : 'Send'}
+          Send
         </button>
       </form>
     </div>
