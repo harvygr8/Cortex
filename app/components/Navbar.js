@@ -31,7 +31,10 @@ export default function Navbar() {
     <nav className={`${navClasses} shadow-md`}>
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link href="/" className={`text-xl font-bold ${isDarkMode ? theme.dark.accent : theme.light.accent}`}>
+          <Link href="/" className={`text-xl font-bold ${isDarkMode ? theme.dark.accent : theme.light.accent} flex items-center gap-2`}>
+            <span className="material-symbols-outlined">
+              network_intel_node
+            </span>
             Cortex
           </Link>
           <div className="flex items-center space-x-4">

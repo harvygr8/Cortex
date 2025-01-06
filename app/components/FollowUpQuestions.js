@@ -15,8 +15,8 @@ export default function FollowUpQuestions({ questions, onQuestionClick }) {
             key={index}
             onClick={() => onQuestionClick(q.question)}
             className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-lg transition-colors ${
-              isDarkMode ? theme.dark.primary : theme.light.primary
-            } text-white hover:opacity-90`}
+              isDarkMode ? theme.dark.extra : theme.light.extra
+            } hover:border-opacity-40`}
           >
             {q.question}
           </button>
