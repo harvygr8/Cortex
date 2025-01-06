@@ -40,7 +40,13 @@ export async function POST(request) {
       );
     }
 
-    const finalResponse = { answer: response.answer };
+    const finalResponse = { 
+      answer: response.content || response.answer,
+      widgets: {
+        sources: response.sources || response.widgets?.sources || [],
+        followUpQuestions: response.widgets?.followUpQuestions || []
+      }
+    };
     console.log('[API] Final response to frontend:', finalResponse);
     return NextResponse.json(finalResponse);
   } catch (error) {

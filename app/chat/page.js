@@ -7,6 +7,8 @@ import useThemeStore from '../../lib/stores/themeStore';
 import Breadcrumb from '../components/Breadcrumb';
 import Loader from '../components/Loader';
 import ChatLoader from '../components/ChatLoader';
+import SourceBadge from '../components/SourceBadge';
+import FollowUpQuestions from '../components/FollowUpQuestions';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
@@ -96,7 +98,8 @@ export default function ChatPage() {
       // Remove loading message and add AI response
       setMessages(prev => prev.filter(msg => msg.type !== 'loading').concat({
         type: 'assistant',
-        content: messageContent
+        content: messageContent,
+        widgets: data.widgets || { sources: [], followUpQuestions: [] }
       }));
 
     } catch (error) {
@@ -151,13 +154,13 @@ export default function ChatPage() {
         <Breadcrumb items={breadcrumbItems} />
       </div>
       
-      <div className={`flex-1 overflow-y-auto p-4 space-y-4 rounded-lg shadow mb-4 ${
+      <div className={`flex-1 overflow-y-auto p-4 space-y-2 rounded-lg shadow mb-2 ${
         isDarkMode ? theme.dark.background2 : theme.light.background2
       }`}>
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
           >
             {message.type === 'loading' ? (
               <ChatLoader />
@@ -165,17 +168,45 @@ export default function ChatPage() {
               <div
                 className={`max-w-[80%] rounded-lg px-4 py-2 ${
                   message.type === 'user'
-                    ? `${theme.dark.primary} text-white`
+                    ? `${isDarkMode ? theme.dark.primary : theme.light.primary} text-white`
                     : `${isDarkMode ? theme.dark.background : theme.light.background} ${isDarkMode ? theme.dark.text : theme.light.text}`
                 }`}
               >
-                {message.content}
+                <div>{message.content}</div>
+                
+                {message.type === 'assistant' && message.widgets?.sources?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {message.widgets.sources.map((source, idx) => (
+                      <span
+                        key={idx}
+                        className={`text-xs px-2 py-0.5 rounded-md text-white ${
+                          isDarkMode 
+                            ? `${theme.dark.primary}`
+                            : `${theme.light.primary}`
+                        }`}
+                      >
+                        {source.title}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
+
+      {messages.length > 0 && messages[messages.length - 1].widgets?.followUpQuestions?.length > 0 && (
+        <div className="mb-2">
+          <FollowUpQuestions 
+            questions={messages[messages.length - 1].widgets.followUpQuestions}
+            onQuestionClick={(question) => {
+              setInput(question);
+            }}
+          />
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
