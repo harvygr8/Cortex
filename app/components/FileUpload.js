@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import useThemeStore from '../../lib/stores/themeStore';
 import { FaUpload } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 
 export default function FileUpload({ projectId, onFileProcessed }) {
-  const [isProcessing, setIsProcessing] = useState(false);
   const { isDarkMode, theme } = useThemeStore();
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -16,7 +17,7 @@ export default function FileUpload({ projectId, onFileProcessed }) {
       return;
     }
 
-    setIsProcessing(true);
+    setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);
 
@@ -45,29 +46,34 @@ export default function FileUpload({ projectId, onFileProcessed }) {
       console.error('Error uploading file:', error);
       toast.error(error.message || 'Error importing document');
     } finally {
-      setIsProcessing(false);
+      setIsUploading(false);
       event.target.value = '';
     }
   };
 
   return (
-    <div className="relative">
+    <>
       <input
         type="file"
+        ref={fileInputRef}
         onChange={handleFileUpload}
         className="hidden"
-        id="file-upload"
-        accept=".md,.txt,.pdf"
+        accept=".md,.markdown"
       />
-      <label
-        htmlFor="file-upload"
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${
-          isDarkMode ? theme.dark.primary : theme.light.primary
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isUploading}
+        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+          isDarkMode 
+            ? `${theme.dark.primary} hover:bg-opacity-80` 
+            : `${theme.light.primary} hover:bg-opacity-80`
         }`}
       >
-        <FaUpload className={isProcessing ? 'animate-spin' : ''} />
-        {isProcessing ? 'Converting...' : 'Import Document'}
-      </label>
-    </div>
+        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          upload_file
+        </span>
+        {isUploading ? 'Importing...' : 'Import Document'}
+      </button>
+    </>
   );
 } 

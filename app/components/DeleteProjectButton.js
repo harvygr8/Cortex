@@ -30,7 +30,7 @@ export default function DeleteProjectButton({ projectId }) {
     <button
       onClick={handleDelete}
       disabled={isDeleting}
-      className={`flex items-center gap-2 text-sm px-3 py-1 rounded-lg transition-colors ${
+      className={`flex items-center gap-2 text-sm px-3 py-1 rounded-lg transition-colors font-figtree ${
         isDarkMode 
           ? '' 
           : ''

@@ -17,6 +17,7 @@ export default function PageView() {
   const params = useParams();
   const { isDarkMode, theme } = useThemeStore();
   const setActiveProjectId = useProjectStore(state => state.setActiveProjectId);
+  const [isPreview, setIsPreview] = useState(false);
 
   useEffect(() => {
     setActiveProjectId(params.projectId);
@@ -87,8 +88,42 @@ export default function PageView() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
+      <div className="mb-8 flex justify-between items-center">
         <Breadcrumb items={breadcrumbItems} />
+        <div className={`flex rounded-lg overflow-hidden border ${
+          isDarkMode ? 'border-neutral-700' : 'border-neutral-200'
+        }`}>
+          <button
+            onClick={() => setIsPreview(false)}
+            className={`px-4 py-1.5 text-sm transition-colors flex items-center gap-2 ${
+              !isPreview 
+                ? isDarkMode 
+                  ? theme.dark.text
+                  : theme.light.accent
+                : isDarkMode 
+                  ? 'text-neutral-600'
+                  : theme.light.text
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+            Edit
+          </button>
+          <button
+            onClick={() => setIsPreview(true)}
+            className={`px-4 py-1.5 text-sm transition-colors flex items-center gap-2 ${
+              isPreview 
+                ? isDarkMode 
+                  ? theme.dark.text
+                  : theme.light.accent
+                : isDarkMode 
+                  ? 'text-neutral-600'
+                  : theme.light.text
+            }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>visibility</span>
+            Preview
+          </button>
+        </div>
       </div>
 
       <div className={`rounded-lg p-6 ${isDarkMode ? theme.dark.background2 : theme.light.background2}`}>
@@ -97,7 +132,7 @@ export default function PageView() {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className={`w-full text-3xl font-bold bg-transparent focus:outline-none ${
+            className={`w-full text-3xl font-bold font-figtree bg-transparent focus:outline-none ${
               isDarkMode ? theme.dark.text : theme.light.text
             }`}
           />
@@ -113,6 +148,7 @@ export default function PageView() {
         <MarkdownPreview 
           content={content} 
           onChange={setContent}
+          isPreview={isPreview}
         />
       </div>
     </div>

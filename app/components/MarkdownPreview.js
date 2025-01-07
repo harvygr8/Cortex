@@ -3,11 +3,9 @@
 import { useState } from 'react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function MarkdownPreview({ content, onChange }) {
-  const [isPreview, setIsPreview] = useState(false);
+export default function MarkdownPreview({ content, onChange, isPreview }) {
   const { isDarkMode, theme } = useThemeStore();
 
-  // Simple markdown parsing (you might want to use a proper markdown library)
   const parseMarkdown = (text) => {
     return text
       .replace(/#{3} (.*)/g, '<h3>$1</h3>')
@@ -20,33 +18,23 @@ export default function MarkdownPreview({ content, onChange }) {
   };
 
   return (
-    <div>
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={() => setIsPreview(!isPreview)}
-          className={`px-3 py-1 rounded-lg text-sm ${
-            isDarkMode ? theme.dark.secondary : theme.light.secondary
-          }`}
-        >
-          {isPreview ? 'Edit' : 'Preview'}
-        </button>
+    <div className="h-[calc(100vh-24rem)] flex flex-col">
+      <div className="flex-1 overflow-y-auto">
+        {isPreview ? (
+          <div
+            className={`prose ${isDarkMode ? 'prose-invert' : ''} max-w-none`}
+            dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
+          />
+        ) : (
+          <textarea
+            value={content}
+            onChange={(e) => onChange(e.target.value)}
+            className={`w-full h-full resize-none bg-transparent focus:outline-none ${
+              isDarkMode ? theme.dark.text : theme.light.text
+            }`}
+          />
+        )}
       </div>
-      
-      {isPreview ? (
-        <div
-          className={`prose ${isDarkMode ? 'prose-invert' : ''} max-w-none`}
-          dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
-        />
-      ) : (
-        <textarea
-          value={content}
-          onChange={(e) => onChange(e.target.value)}
-          className={`w-full bg-transparent focus:outline-none ${
-            isDarkMode ? theme.dark.text : theme.light.text
-          }`}
-          rows={20}
-        />
-      )}
     </div>
   );
 } 

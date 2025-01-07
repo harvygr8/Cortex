@@ -26,7 +26,7 @@ export default function Home() {
     <div className="max-w-7xl mx-auto px-4">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? theme.dark.text : theme.light.text}`}>
+          <h1 className={`text-3xl font-bold font-figtree mb-2 ${isDarkMode ? theme.dark.text : theme.light.text}`}>
             Your Knowledge Hub
           </h1>
           <p className={isDarkMode ? theme.dark.secondary : theme.light.secondary}>

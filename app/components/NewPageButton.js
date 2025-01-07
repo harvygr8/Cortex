@@ -38,15 +38,22 @@ export default function NewPageButton({ projectId, onPageCreated }) {
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className={`px-4 py-2 rounded-lg ${isDarkMode ? theme.dark.primary : theme.light.primary}`}
+        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+          isDarkMode 
+            ? `${theme.dark.primary} hover:bg-opacity-80` 
+            : `${theme.light.primary} hover:bg-opacity-80`
+        }`}
       >
+        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          note_add
+        </span>
         New Page
       </button>
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className={`rounded-lg p-6 w-full max-w-md ${isDarkMode ? theme.dark.background2 : theme.light.background2}`}>
-            <h2 className={`text-2xl font-bold mb-4 ${isDarkMode ? theme.dark.text : theme.light.text}`}>
+            <h2 className={`text-2xl font-bold font-figtree mb-4 ${isDarkMode ? theme.dark.text : theme.light.text}`}>
               Create New Page
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -59,7 +66,7 @@ export default function NewPageButton({ projectId, onPageCreated }) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className={`mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                    isDarkMode ? 'bg-slate-700 border-slate-600' : ''
+                    isDarkMode ? 'bg-neutral-700 border-neutral-600 text-white' : ''
                   }`}
                   required
                 />
@@ -68,16 +75,38 @@ export default function NewPageButton({ projectId, onPageCreated }) {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className={`px-4 py-2 rounded-lg ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    isDarkMode 
+                      ? `${theme.dark.text} hover:${theme.dark.hover.secondary}` 
+                      : `${theme.light.text} hover:${theme.light.hover.secondary}`
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className={`px-4 py-2 rounded-lg ${isDarkMode ? theme.dark.primary : theme.light.primary}`}
+                  className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                    isDarkMode 
+                      ? `${theme.dark.primary} hover:bg-opacity-80` 
+                      : `${theme.light.primary} hover:bg-opacity-80`
+                  }`}
                 >
-                  {saving ? 'Creating...' : 'Create'}
+                  {saving ? (
+                    <>
+                      <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                        progress_activity
+                      </span>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                        note_add
+                      </span>
+                      Create
+                    </>
+                  )}
                 </button>
               </div>
             </form>

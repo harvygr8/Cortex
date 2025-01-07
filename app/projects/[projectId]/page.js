@@ -72,7 +72,7 @@ export default function ProjectPage() {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className={`text-3xl font-bold w-full bg-transparent border-b ${
+                  className={`text-3xl font-bold font-figtree w-full bg-transparent border-b ${
                     isDarkMode ? theme.dark.text : theme.light.text
                   }`}
                 />
@@ -106,7 +106,7 @@ export default function ProjectPage() {
               </div>
             ) : (
               <div>
-                <h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? theme.dark.text : theme.light.text}`}>
+                <h1 className={`text-3xl font-bold font-figtree mb-2 ${isDarkMode ? theme.dark.text : theme.light.text}`}>
                   {project.title}
                 </h1>
                 <p className={isDarkMode ? theme.dark.secondary : theme.light.secondary}>
@@ -126,7 +126,7 @@ export default function ProjectPage() {
       </div>
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className={`text-xl font-semibold ${isDarkMode ? theme.dark.text : theme.light.text}`}>
+        <h2 className={`text-xl font-semibold font-figtree ${isDarkMode ? theme.dark.text : theme.light.text}`}>
           Pages
         </h2>
         <div className="flex gap-4">

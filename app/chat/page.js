@@ -127,7 +127,12 @@ export default function ChatPage() {
   if (!project || isInitializing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader text={isInitializing ? "Initializing AI context..." : "Loading project"} />
+        <div className="scale-150">
+          <ChatLoader />
+        </div>
+        <p className={`mt-4 ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}>
+          {isInitializing ? "Initializing AI context" : "Loading project"}
+        </p>
       </div>
     );
   }
@@ -218,7 +223,7 @@ export default function ChatPage() {
             isDarkMode 
               ? `${theme.dark.background2} ${theme.dark.border} ${theme.dark.text} placeholder-stone-500` 
               : `${theme.light.background2} ${theme.light.border} ${theme.light.text} placeholder-stone-400`
-          } focus:ring-2 focus:ring-amber-500`}
+          }`}
           disabled={loading}
         />
         <button

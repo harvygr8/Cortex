@@ -9,7 +9,7 @@ export default function ProjectGrid({ projects }) {
   if (!projects.length) {
     return (
       <div className={`p-8 rounded-lg shadow-sm ${isDarkMode ? theme.dark.background : theme.light.background}`}>
-        <h3 className={`text-xl font-semibold ${isDarkMode ? theme.dark.text : theme.light.text}`}>
+        <h3 className={`text-xl font-semibold font-figtree ${isDarkMode ? theme.dark.text : theme.light.text}`}>
           Welcome to Cortex!
         </h3>
         <p className={`mt-2 ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}>
@@ -29,7 +29,7 @@ export default function ProjectGrid({ projects }) {
               : `${theme.light.background2} shadow-md`
           }`}>
             <div className="flex justify-between items-start">
-              <h3 className={`text-xl font-semibold ${isDarkMode ? theme.dark.text : theme.light.text}`}>
+              <h3 className={`text-xl font-semibold font-figtree ${isDarkMode ? theme.dark.text : theme.light.text}`}>
                 {project.title}
               </h3>
               <span className={`text-sm ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}>

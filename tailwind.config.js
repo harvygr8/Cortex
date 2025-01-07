@@ -12,6 +12,9 @@ module.exports = {
         center: true,
         padding: '1rem',
       },
+      fontFamily: {
+        figtree: ['var(--font-figtree)'],
+      },
     },
   },
   plugins: [],
