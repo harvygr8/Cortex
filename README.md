@@ -38,14 +38,14 @@ Cortex is a powerful knowledge management system that combines local document st
 
 1. **Prerequisites**
    - Node.js 18+
-   - Install Ollama:
-     ```bash
-     # macOS/Linux
-     curl -L https://ollama.com/install.sh | sh
+   - Install Ollama
+   ```bash
+    # macOS/Linux
+    curl -L https://ollama.com/install.sh | sh
      
-     # Windows
-     Download from https://ollama.com/download/windows
-     ```
+    # Windows
+    Download from https://ollama.com/download/windows
+    ```
 
 2. **Install Llama2 Model**
    ```bash
