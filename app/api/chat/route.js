@@ -16,7 +16,7 @@ const initializeAgent = async () => {
 
 export async function POST(request) {
   try {
-    const { question, projectId } = await request.json();
+    const { question, projectId, useKnowledge } = await request.json();
     
     if (!projectId) {
       return NextResponse.json(
@@ -46,7 +46,7 @@ export async function POST(request) {
             });
             await writer.write(encoder.encode(`data: ${payload}\n\n`));
           }
-        });
+        }, useKnowledge);
       } catch (error) {
         console.error('[API] Streaming error:', error);
       } finally {

@@ -61,8 +61,8 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, useKnowledge = false) => {
+    if (e) e.preventDefault();
     if (!input.trim() || loading) return;
 
     const userMessage = { type: 'user', content: input };
@@ -83,7 +83,8 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           question: input,
-          projectId: activeProjectId 
+          projectId: activeProjectId,
+          useKnowledge
         }),
       });
       
@@ -281,6 +282,20 @@ export default function ChatPage() {
           }`}
           disabled={loading}
         />
+        <button
+          type="button"
+          onClick={() => handleSubmit(null, true)}
+          disabled={loading}
+          className={`p-2 rounded-lg transition-opacity flex items-center justify-center ${
+            isDarkMode ? theme.dark.primary : theme.light.primary
+          } ${isDarkMode ? theme.dark.hover.primary : theme.light.hover.primary} disabled:opacity-40`}
+          title="Search knowledge base"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>
+            psychology
+          </span>
+          <span className="sr-only">Search knowledge</span>
+        </button>
         <button
           type="submit"
           disabled={loading}
