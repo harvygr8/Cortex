@@ -9,6 +9,7 @@ import Loader from '../components/Loader';
 import ChatLoader from '../components/ChatLoader';
 import SourceBadge from '../components/SourceBadge';
 import FollowUpQuestions from '../components/FollowUpQuestions';
+import ReactMarkdown from 'react-markdown';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
@@ -227,7 +228,13 @@ export default function ChatPage() {
                         : `${isDarkMode ? theme.dark.background : theme.light.background} ${isDarkMode ? theme.dark.text : theme.light.text}`
                     }`}
                   >
-                    <div>{message.content}</div>
+                    {message.type === 'assistant' ? (
+                      <div className={`prose ${isDarkMode ? 'prose-invert' : ''} max-w-none`}>
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <div>{message.content}</div>
+                    )}
                     
                     {message.type === 'assistant' && 
                      message.widgets?.sources?.length > 0 && 
