@@ -228,20 +228,24 @@ export default function ChatPage() {
                   >
                     <div>{message.content}</div>
                     
-                    {message.type === 'assistant' && message.widgets?.sources?.length > 0 && (
+                    {message.type === 'assistant' && 
+                     message.widgets?.sources?.length > 0 && 
+                     message.widgets.sources.some(source => source.title && source.title.trim() !== '') && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        {message.widgets.sources.map((source, idx) => (
-                          <span
-                            key={idx}
-                            className={`text-xs px-2 py-0.5 rounded-md text-white ${
-                              isDarkMode 
-                                ? `${theme.dark.primary}`
-                                : `${theme.light.primary}`
-                            }`}
-                          >
-                            {source.title}
-                          </span>
-                        ))}
+                        {message.widgets.sources
+                          .filter(source => source.title && source.title.trim() !== '')
+                          .map((source, idx) => (
+                            <span
+                              key={idx}
+                              className={`text-xs px-2 py-0.5 rounded-md text-white ${
+                                isDarkMode 
+                                  ? `${theme.dark.primary}`
+                                  : `${theme.light.primary}`
+                              }`}
+                            >
+                              {source.title}
+                            </span>
+                          ))}
                       </div>
                     )}
                   </div>

@@ -6,8 +6,8 @@ export default function ChatLoader() {
   const { isDarkMode, theme } = useThemeStore();
   
   return (
-    <div className="flex items-start space-x-2 p-4">
-      <div className={`max-w-[80%] rounded-lg p-3 ${
+    <div className="flex justify-start mb-4">
+      <div className={`max-w-[80%] rounded-lg px-4 py-2 ${
         isDarkMode ? theme.dark.background : theme.light.background
       }`}>
         <div className="flex items-center space-x-1">
