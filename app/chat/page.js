@@ -70,8 +70,12 @@ export default function ChatPage() {
     setInput('');
     setLoading(true);
     
-    // Add temporary loading message
-    setMessages(prev => [...prev, { type: 'loading' }]);
+    console.log('[Chat] Sending message:', input);
+    
+    // Add loading message
+    setMessages(prev => [...prev, { 
+      type: 'loading'
+    }]);
 
     try {
       const response = await fetch('/api/chat', {
@@ -86,29 +90,63 @@ export default function ChatPage() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
+
+      // Replace loading message with assistant message
+      setMessages(prev => {
+        const newMessages = prev.slice(0, -1); // Remove loading message
+        return [...newMessages, { 
+          type: 'assistant', 
+          content: '', 
+          widgets: { sources: [], followUpQuestions: [] },
+          streaming: true 
+        }];
+      });
+
+      console.log('[Chat] Stream connected');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          console.log('[Chat] Stream complete');
+          break;
+        }
+        
+        const chunk = decoder.decode(value);
+        console.log('[Chat] Received chunk:', chunk);
+        
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            console.log('[Chat] Processed data:', data);
+            
+            setMessages(prev => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              if (lastMessage.type === 'assistant') {
+                lastMessage.content = data.answer;
+                lastMessage.widgets = data.widgets;
+                lastMessage.streaming = !data.widgets.done;
+              }
+              return newMessages;
+            });
+          }
+        }
       }
-
-      const messageContent = data.answer || 'No response received';
-      
-      // Remove loading message and add AI response
-      setMessages(prev => prev.filter(msg => msg.type !== 'loading').concat({
-        type: 'assistant',
-        content: messageContent,
-        widgets: data.widgets || { sources: [], followUpQuestions: [] }
-      }));
-
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('[Chat] Error:', error);
       // Remove loading message and add error message
-      setMessages(prev => prev.filter(msg => msg.type !== 'loading').concat({
-        type: 'assistant',
-        content: 'Sorry, there was an error processing your question.'
-      }));
+      setMessages(prev => {
+        const newMessages = prev.filter(msg => msg.type !== 'loading');
+        return [...newMessages, {
+          type: 'assistant',
+          content: 'Sorry, there was an error processing your question.',
+          widgets: { sources: [], followUpQuestions: [] }
+        }];
+      });
     } finally {
       setLoading(false);
     }
@@ -154,7 +192,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-12rem)] flex flex-col p-4">
+    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex flex-col p-4">
       <div className="mb-8">
         <Breadcrumb items={breadcrumbItems} />
       </div>
@@ -162,43 +200,56 @@ export default function ChatPage() {
       <div className={`flex-1 overflow-y-auto p-4 space-y-2 rounded-lg shadow mb-2 ${
         isDarkMode ? theme.dark.background2 : theme.light.background2
       }`}>
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
-          >
-            {message.type === 'loading' ? (
-              <ChatLoader />
-            ) : (
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center">
+            <span className="material-symbols-outlined mb-4 text-4xl" style={{ fontSize: '48px' }}>
+              forum
+            </span>
+            <p className={`text-lg ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}>
+              Ask a question about your project
+            </p>
+          </div>
+        ) : (
+          <>
+            {messages.map((message, index) => (
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                  message.type === 'user'
-                    ? `${isDarkMode ? theme.dark.primary : theme.light.primary} text-white`
-                    : `${isDarkMode ? theme.dark.background : theme.light.background} ${isDarkMode ? theme.dark.text : theme.light.text}`
-                }`}
+                key={index}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
               >
-                <div>{message.content}</div>
-                
-                {message.type === 'assistant' && message.widgets?.sources?.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {message.widgets.sources.map((source, idx) => (
-                      <span
-                        key={idx}
-                        className={`text-xs px-2 py-0.5 rounded-md text-white ${
-                          isDarkMode 
-                            ? `${theme.dark.primary}`
-                            : `${theme.light.primary}`
-                        }`}
-                      >
-                        {source.title}
-                      </span>
-                    ))}
+                {message.type === 'loading' ? (
+                  <ChatLoader />
+                ) : (
+                  <div
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                      message.type === 'user'
+                        ? `${isDarkMode ? theme.dark.primary : theme.light.primary} text-white`
+                        : `${isDarkMode ? theme.dark.background : theme.light.background} ${isDarkMode ? theme.dark.text : theme.light.text}`
+                    }`}
+                  >
+                    <div>{message.content}</div>
+                    
+                    {message.type === 'assistant' && message.widgets?.sources?.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {message.widgets.sources.map((source, idx) => (
+                          <span
+                            key={idx}
+                            className={`text-xs px-2 py-0.5 rounded-md text-white ${
+                              isDarkMode 
+                                ? `${theme.dark.primary}`
+                                : `${theme.light.primary}`
+                            }`}
+                          >
+                            {source.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        ))}
+            ))}
+          </>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -229,11 +280,15 @@ export default function ChatPage() {
         <button
           type="submit"
           disabled={loading}
-          className={`px-4 py-2 rounded-lg transition-opacity ${
+          className={`p-2 rounded-lg transition-opacity flex items-center justify-center ${
             isDarkMode ? theme.dark.primary : theme.light.primary
           } ${isDarkMode ? theme.dark.hover.primary : theme.light.hover.primary} disabled:opacity-40`}
+          title="Send message"
         >
-          Send
+          <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>
+            send
+          </span>
+          <span className="sr-only">Send</span>
         </button>
       </form>
     </div>

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ContextAgent } from '../../../lib/contextAgent';
 import ollamaStatus from '../../../lib/utils/ollamaStatus';
-import projectStore from '../../../lib/projectStore';
 
 let contextAgent;
 
@@ -27,32 +26,45 @@ export async function POST(request) {
     }
 
     const agent = await initializeAgent();
-    const response = await agent.processProjectQuestion(projectId, question);
-    console.log('[API] Raw agent response:', response);
-    console.log('[API] Response type:', typeof response);
-    console.log('[API] Response structure:', Object.keys(response));
+    
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+    const encoder = new TextEncoder();
 
-    if (!response || typeof response !== 'object') {
-      console.log('[API] Invalid response format detected');
-      return NextResponse.json(
-        { error: 'Invalid response format' },
-        { status: 500 }
-      );
-    }
-
-    const finalResponse = { 
-      answer: response.content || response.answer,
-      widgets: {
-        sources: response.sources || response.widgets?.sources || [],
-        followUpQuestions: response.widgets?.followUpQuestions || []
+    // Start processing in the background
+    (async () => {
+      try {
+        await agent.processProjectQuestion(projectId, question, {
+          onProgress: async (chunk) => {
+            const payload = JSON.stringify({
+              answer: chunk.content,
+              widgets: {
+                sources: chunk.sources,
+                followUpQuestions: chunk.followUpQuestions || [],
+                done: chunk.done
+              }
+            });
+            await writer.write(encoder.encode(`data: ${payload}\n\n`));
+          }
+        });
+      } catch (error) {
+        console.error('[API] Streaming error:', error);
+      } finally {
+        await writer.close();
       }
-    };
-    console.log('[API] Final response to frontend:', finalResponse);
-    return NextResponse.json(finalResponse);
+    })();
+
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
   } catch (error) {
-    console.error('Error processing question:', error);
+    console.error('[API] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to process question' },
+      { error: 'An error occurred while processing your request' },
       { status: 500 }
     );
   }
