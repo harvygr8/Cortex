@@ -15,15 +15,18 @@ export async function POST(request, { params }) {
       );
     }
     
+    let vectorGenerationSuccess = false;
     try {
       // Get project and update vectors
       const project = await projectStore.getProject(params.projectId);
       if (project.pages && project.pages.length > 0) {
         await vectorStore.createOrUpdateProjectIndex(project);
+        vectorGenerationSuccess = true;
       }
     } catch (vectorError) {
-      console.error('Vector store error (non-fatal):', vectorError);
-      // Continue without vector store update
+      console.error('Vector store error:', vectorError);
+      console.error('Vector generation failed - page saved to SQLite but search may be limited');
+      // Continue without vector store update - page is still saved in SQLite
     }
     
     return NextResponse.json(page);

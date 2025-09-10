@@ -1,80 +1,71 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function ChapterList({ chapters, projectId }) {
-  const { isDarkMode, theme } = useThemeStore();
+export default function ChapterList({ chapters, projectId, pageId }) {
+  const [expandedChapters, setExpandedChapters] = useState(new Set());
+  const { isDarkMode, colors } = useThemeStore();
+  const theme = isDarkMode ? colors.dark : colors.light;
 
-  const onDragEnd = async (result) => {
-    if (!result.destination) return;
-
-    const items = Array.from(chapters);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    try {
-      await fetch(`/api/projects/${projectId}/chapters/reorder`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          chapters: items.map((item, index) => ({ 
-            id: item.id, 
-            order_index: index 
-          }))
-        }),
-      });
-    } catch (error) {
-      console.error('Error reordering chapters:', error);
+  const toggleChapter = (chapterId) => {
+    const newExpanded = new Set(expandedChapters);
+    if (newExpanded.has(chapterId)) {
+      newExpanded.delete(chapterId);
+    } else {
+      newExpanded.add(chapterId);
     }
+    setExpandedChapters(newExpanded);
   };
 
   if (!chapters.length) {
     return (
-      <div className={`p-8 rounded-lg shadow-sm ${isDarkMode ? theme.dark.background : theme.light.background}`}>
-        <h3 className={`text-xl font-semibold ${isDarkMode ? theme.dark.text : theme.light.text}`}>
+      <div className={`p-8 rounded-lg shadow-sm ${theme.background2}`}>
+        <h3 className={`text-xl font-semibold font-source-sans-3 ${theme.text}`}>
           No chapters yet
         </h3>
-        <p className={`mt-2 ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}>
-          Start by adding your first chapter.
+        <p className={`mt-2 ${theme.secondary}`}>
+          Create your first chapter to start organizing your content.
         </p>
       </div>
     );
   }
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="chapters">
-        {(provided) => (
-          <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-            {chapters.map((chapter, index) => (
-              <Draggable key={chapter.id} draggableId={chapter.id} index={index}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
-                    className={`p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow ${
-                      isDarkMode ? theme.dark.background2 : theme.light.background2
-                    }`}
-                  >
-                    <Link href={`/projects/${projectId}/chapters/${chapter.id}`}>
-                      <h3 className={`text-xl font-semibold ${isDarkMode ? theme.dark.text : theme.light.text}`}>
-                        {chapter.title}
-                      </h3>
-                      <p className={`mt-2 ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}>
-                        {chapter.pages?.length || 0} pages
-                      </p>
-                    </Link>
-                  </div>
-                )}
-              </Draggable>
-            ))}
-            {provided.placeholder}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {chapters.map((chapter) => (
+        <div key={chapter.id} className={`p-6 rounded-lg shadow-sm hover:shadow-md transition-all hover:-translate-y-1 h-48 flex flex-col ${
+          isDarkMode
+            ? `${theme.background2} border border-gray-700`
+            : `${theme.background2} shadow-md`
+        }`}>
+          <div className="flex justify-between items-start mb-2">
+            <h3 className={`text-xl font-semibold font-source-sans-3 line-clamp-1 ${theme.text}`}>
+              {chapter.title}
+            </h3>
           </div>
-        )}
-      </Droppable>
-    </DragDropContext>
+          <div className="flex-1">
+            {chapter.content && (
+              <p className={`text-sm line-clamp-3 ${theme.secondary}`}>
+                {chapter.content}
+              </p>
+            )}
+          </div>
+          <div className="mt-auto pt-4">
+            <p className={`text-xs ${theme.secondary}`}>
+              {chapter.created_at
+                ? new Date(chapter.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })
+                : 'Recently created'
+              }
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 } 

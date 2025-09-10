@@ -1,141 +1,139 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import useProjectStore from '../../../lib/stores/projectStore';
+import useThemeStore from '../../../lib/stores/themeStore';
 import PageList from '../../components/PageList';
 import NewPageButton from '../../components/NewPageButton';
 import FileUpload from '../../components/FileUpload';
-import useProjectStore from '../../../lib/stores/projectStore';
-import useThemeStore from '../../../lib/stores/themeStore';
-import Breadcrumb from '../../components/Breadcrumb';
 import DeleteProjectButton from '../../components/DeleteProjectButton';
+import RegenerateVectorsButton from '../../components/RegenerateVectorsButton';
+import Loader from '../../components/Loader';
+import PageLoader from '../../components/PageLoader';
+import Breadcrumb from '../../components/Breadcrumb';
 
 export default function ProjectPage() {
-  const [project, setProject] = useState(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
   const params = useParams();
-  const { isDarkMode, theme } = useThemeStore();
+  const router = useRouter();
+  const projectId = params.projectId;
+  const [project, setProject] = useState(null);
+  const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const setActiveProjectId = useProjectStore(state => state.setActiveProjectId);
+  const { isDarkMode, colors } = useThemeStore();
+  const theme = isDarkMode ? colors.dark : colors.light;
 
   useEffect(() => {
-    setActiveProjectId(params.projectId);
-    fetchProject();
-  }, [params.projectId]);
+    if (projectId) {
+      setActiveProjectId(projectId);
+      fetchProjectData();
+    }
+  }, [projectId, setActiveProjectId]);
 
-  const fetchProject = async () => {
-    const response = await fetch(`/api/projects/${params.projectId}`);
-    const data = await response.json();
-    setProject(data);
-    setTitle(data.title);
-    setDescription(data.description);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
+  const fetchProjectData = async () => {
     try {
-      const response = await fetch(`/api/projects/${params.projectId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description }),
-      });
-      const updatedProject = await response.json();
-      setProject(updatedProject);
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving project:', error);
+      const [projectRes, pagesRes] = await Promise.all([
+        fetch(`/api/projects/${projectId}`),
+        fetch(`/api/projects/${projectId}/pages`)
+      ]);
+
+      if (!projectRes.ok || !pagesRes.ok) {
+        throw new Error('Failed to fetch project data');
+      }
+
+      const [projectData, pagesData] = await Promise.all([
+        projectRes.json(),
+        pagesRes.json()
+      ]);
+
+      setProject(projectData);
+      setPages(pagesData);
+    } catch (err) {
+      console.error('Error fetching project:', err);
+      setError(err.message);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const breadcrumbItems = [
-    { label: 'Projects', path: '/' },
-    { label: project?.title }
-  ];
+  const handlePageCreated = () => {
+    fetchProjectData();
+  };
 
-  if (!project) return (
-    <p className={isDarkMode ? theme.dark.text : theme.light.text}>Loading...</p>
-  );
+  const handleFileProcessed = () => {
+    fetchProjectData();
+  };
+
+  const handleProjectDeleted = () => {
+    router.push('/');
+  };
+
+  if (loading) {
+    return <PageLoader />;
+  }
+
+  if (error) {
+    return (
+      <div className={`flex items-center justify-center min-h-screen ${theme.background}`}>
+        <div className="text-center">
+          <p className={`text-lg mb-4 ${theme.text}`}>Error: {error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className={`px-4 py-2 rounded ${theme.secondary}`}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className={`flex items-center justify-center min-h-screen ${theme.background}`}>
+        <p className={theme.text}>Project not found</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
-      <div className="mb-8">
-        <Breadcrumb items={breadcrumbItems} />
-        <div className="flex justify-between items-start">
-          <div>
-            {isEditing ? (
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className={`text-3xl font-bold font-figtree w-full bg-transparent border-b ${
-                    isDarkMode ? theme.dark.text : theme.light.text
-                  }`}
-                />
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className={`w-full bg-transparent border rounded p-2 ${
-                    isDarkMode ? theme.dark.text : theme.light.text
-                  }`}
-                  rows={3}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className={`px-4 py-2 rounded ${isDarkMode ? theme.dark.accent : theme.light.accent}`}
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTitle(project.title);
-                      setDescription(project.description);
-                      setIsEditing(false);
-                    }}
-                    className={`px-4 py-2 rounded ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <h1 className={`text-3xl font-bold font-figtree mb-2 ${isDarkMode ? theme.dark.text : theme.light.text}`}>
-                  {project.title}
-                </h1>
-                <p className={isDarkMode ? theme.dark.secondary : theme.light.secondary}>
+    <div className={`min-h-screen ${theme.background}`}>
+      <div className="px-8 pt-6 pl-12">
+        <Breadcrumb 
+          items={[
+            { label: 'Projects', path: '/' },
+            { label: project?.title || 'Loading...' }
+          ]} 
+        />
+        <div className="mb-12">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              {project?.description && (
+                <p className={`text-lg ${theme.secondary} mb-4`}>
                   {project.description}
                 </p>
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className={`mt-2 text-sm ${isDarkMode ? theme.dark.accent : theme.light.accent}`}
-                >
-                  Edit
-                </button>
-              </div>
-            )}
+              )}
+            </div>
+            <div className="flex gap-2">
+              <NewPageButton projectId={projectId} onPageCreated={handlePageCreated} />
+              <DeleteProjectButton projectId={projectId} onProjectDeleted={handleProjectDeleted} />
+              <FileUpload projectId={projectId} onFileProcessed={handleFileProcessed} />
+              <RegenerateVectorsButton projectId={projectId} />
+            </div>
           </div>
-          <DeleteProjectButton projectId={params.projectId} />
+
+          <div className="mt-10 mb-4">
+            <h2 className={`text-2xl font-semibold font-source-sans-3 ${theme.text}`}>
+              Pages ({pages.length})
+            </h2>
+          </div>
+
+          <PageList pages={pages} projectId={projectId} />
         </div>
       </div>
-
-      <div className="flex justify-between items-center mb-6">
-        <h2 className={`text-xl font-semibold font-figtree ${isDarkMode ? theme.dark.text : theme.light.text}`}>
-          Pages
-        </h2>
-        <div className="flex gap-4">
-          <FileUpload projectId={params.projectId} onFileProcessed={fetchProject} />
-          <NewPageButton projectId={params.projectId} onPageCreated={fetchProject} />
-        </div>
-      </div>
-
-      <PageList pages={project.pages || []} projectId={params.projectId} />
     </div>
   );
 }

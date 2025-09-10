@@ -2,11 +2,14 @@ import { useState, useRef } from 'react';
 import useThemeStore from '../../lib/stores/themeStore';
 import { FaUpload } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
+import VectorProcessingModal from './VectorProcessingModal';
 
 export default function FileUpload({ projectId, onFileProcessed }) {
-  const { isDarkMode, theme } = useThemeStore();
   const [isUploading, setIsUploading] = useState(false);
+  const [isProcessingVectors, setIsProcessingVectors] = useState(false);
   const fileInputRef = useRef(null);
+  const { isDarkMode, colors } = useThemeStore();
+  const theme = isDarkMode ? colors.dark : colors.light;
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -40,7 +43,15 @@ export default function FileUpload({ projectId, onFileProcessed }) {
       }
       
       const data = await response.json();
-      toast.success('Document imported successfully');
+      
+      // Show vector processing modal
+      setIsProcessingVectors(true);
+      setTimeout(() => {
+        setIsProcessingVectors(false);
+        // Show toast after modal closes
+        toast.success('Document imported successfully');
+      }, 3000); // Show for 3 seconds
+      
       onFileProcessed(data);
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -58,22 +69,26 @@ export default function FileUpload({ projectId, onFileProcessed }) {
         ref={fileInputRef}
         onChange={handleFileUpload}
         className="hidden"
-        accept=".md,.markdown"
+        accept=".txt,.md,.markdown"
       />
       <button
         onClick={() => fileInputRef.current?.click()}
-        disabled={isUploading}
-        className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-          isDarkMode 
-            ? `${theme.dark.primary} hover:bg-opacity-80` 
-            : `${theme.light.primary} hover:bg-opacity-80`
-        }`}
+        disabled={isUploading || isProcessingVectors}
+        className={`p-3 rounded-lg ${theme.button} hover:opacity-80 transition-opacity flex items-center gap-2`}
+        title="Import Document"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
-          upload_file
-        </span>
-        {isUploading ? 'Importing...' : 'Import Document'}
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        {isUploading ? 'Importing...' : isProcessingVectors ? 'Processing...' : 'Import Document'}
       </button>
+
+      {/* Vector Processing Modal */}
+      <VectorProcessingModal
+        isOpen={isProcessingVectors}
+        onClose={() => setIsProcessingVectors(false)}
+        message="Processing your uploaded document..."
+      />
     </>
   );
 } 

@@ -2,29 +2,31 @@
 
 import { useRouter } from 'next/navigation';
 import useThemeStore from '../../lib/stores/themeStore';
+import { getHeadingClasses, getBodyClasses } from '../../lib/utils/fontUtils';
 
-export default function Breadcrumb({ items }) {
+export default function Breadcrumb({ items, showLargeTitle = true }) {
   const router = useRouter();
-  const { isDarkMode, theme } = useThemeStore();
+  const { isDarkMode, colors, fonts } = useThemeStore();
+  const theme = isDarkMode ? colors.dark : colors.light;
 
   return (
-    <div className="flex items-center gap-1 mb-4">
+    <div className="flex items-center gap-1 mb-6">
       {items.map((item, index) => (
         <div key={item.path || index} className="flex items-center">
           {index > 0 && (
-            <span className={`text-sm mx-2`}>
+            <span className={`text-sm mx-2 ${theme.secondary}`}>
               /
             </span>
           )}
           {item.path ? (
             <button
               onClick={() => router.push(item.path)}
-              className={`text-sm hover:underline focus:outline-none`}
+              className={`text-sm hover:underline focus:outline-none ${theme.text} hover:${theme.accent}`}
             >
               {item.label}
             </button>
           ) : (
-            <span className={`text-sm`}>
+            <span className={`${showLargeTitle && index === items.length - 1 ? getHeadingClasses('h1') : getBodyClasses('bodySmall')} ${theme.text}`}>
               {item.label}
             </span>
           )}

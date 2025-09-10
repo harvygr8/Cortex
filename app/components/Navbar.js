@@ -4,33 +4,29 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import useThemeStore from '../../lib/stores/themeStore';
 import useProjectStore from '../../lib/stores/projectStore';
+import { getHeadingClasses } from '../../lib/utils/fontUtils';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { isDarkMode, theme, toggleTheme } = useThemeStore();
+  const { isDarkMode, colors, fonts, toggleTheme } = useThemeStore();
   const activeProjectId = useProjectStore(state => state.activeProjectId);
+  const theme = isDarkMode ? colors.dark : colors.light;
 
-  const navClasses = isDarkMode 
-    ? theme.dark.navbar
-    : theme.light.navbar;
+  const navClasses = theme.navbar;
 
   const linkClasses = (isActive) => {
     const baseClasses = 'px-3 py-2 rounded-md flex items-center gap-2 relative group';
-    if (isDarkMode) {
-      return isActive
-        ? `${baseClasses} ${theme.dark.primary}`
-        : `${baseClasses} ${theme.dark.text} ${theme.dark.hover.primary}`;
+    if (isActive) {
+      return `${baseClasses} ${theme.primary}`;
     }
-    return isActive
-      ? `${baseClasses} ${theme.light.primary}`
-      : `${baseClasses} ${theme.light.text} ${theme.light.hover.primary}`;
+    return `${baseClasses} ${theme.text} ${theme.hoverPrimary}`;
   };
 
   return (
     <nav className={`${navClasses} shadow-md`}>
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-14">
-          <Link href="/" className={`text-2xl font-bold ${isDarkMode ? theme.dark.accent : theme.light.accent} flex items-center gap-2`}>
+          <Link href="/" className={`${getHeadingClasses('logo')} ${theme.accent} flex items-center gap-2`}>
             <span className="material-symbols-outlined" style={{ fontSize: '34px' }}>
               network_intel_node
             </span>

@@ -59,6 +59,18 @@ export async function PUT(request, { params }) {
       );
     }
 
+    // Regenerate vectors after project update
+    try {
+      console.log('[Project Update] Regenerating vectors after project metadata change...');
+      if (project.pages && project.pages.length > 0) {
+        await vectorStore.createOrUpdateProjectIndex(project);
+        console.log('[Project Update] Vectors regenerated successfully');
+      }
+    } catch (vectorError) {
+      console.error('[Project Update] Vector store error (non-fatal):', vectorError);
+      // Continue without vector store update
+    }
+
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error updating project:', error);

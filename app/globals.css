@@ -1,3 +1,132 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+/* React Flow Selection Box Styles */
+/* Show selection rectangle while dragging to select */
+.selection-enabled .react-flow__selection {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border: 2px dashed #3b82f6 !important;
+  border-radius: 4px !important;
+}
+
+/* Hide the selection rectangle around selected nodes group */
+.selection-enabled .react-flow__nodesselection-rect {
+  background: transparent !important;
+  border: none !important;
+  opacity: 0 !important;
+}
+
+.selection-enabled .react-flow__selectionpane {
+  cursor: crosshair !important;
+}
+
+/* Hide additional selection outlines since we have individual node highlights */
+.selection-enabled .react-flow__selection-user {
+  background: transparent !important;
+  border: none !important;
+  opacity: 0 !important;
+}
+
+.selection-enabled .react-flow__renderer {
+  user-select: none;
+}
+
+/* Pan mode cursor when holding Cmd/Ctrl */
+.selection-enabled .react-flow__pane.react-flow__pane--dragging {
+  cursor: grabbing !important;
+}
+
+.selection-enabled .react-flow__pane:active {
+  cursor: grab !important;
+}
+
+/* Syntax highlighting styles for code blocks */
+.hljs {
+  background: #f8f9fa !important;
+  color: #333 !important;
+}
+
+.dark .hljs {
+  background: #1f2937 !important;
+  color: #e5e7eb !important;
+}
+
+/* Custom prose styles for chat markdown */
+.prose {
+  color: inherit;
+  line-height: 1.6;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  color: inherit;
+  line-height: 1.3;
+}
+
+.prose p {
+  color: inherit;
+  line-height: 1.6;
+}
+
+.prose strong {
+  color: inherit;
+  font-weight: 500;
+}
+
+.prose em {
+  color: inherit;
+  font-style: italic;
+}
+
+.prose ul, .prose ol {
+  color: inherit;
+  line-height: 1.5;
+}
+
+.prose li {
+  color: inherit;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.prose li:last-child {
+  margin-bottom: 0;
+}
+
+.prose blockquote {
+  color: inherit;
+  border-left-color: currentColor;
+  line-height: 1.5;
+}
+
+.prose table {
+  color: inherit;
+  line-height: 1.4;
+}
+
+.prose th, .prose td {
+  color: inherit;
+  line-height: 1.4;
+}
+
+/* Additional spacing improvements */
+.prose > * + * {
+  margin-top: 1rem;
+}
+
+.prose h1 + *, .prose h2 + *, .prose h3 + * {
+  margin-top: 0.75rem;
+}
+
+/* Extra spacing for better readability */
+.prose p + p {
+  margin-top: 1.25rem;
+}
+
+.prose ul + p, .prose ol + p {
+  margin-top: 1.25rem;
+}
+
+.prose p + ul, .prose p + ol {
+  margin-top: 1.25rem;
+} 

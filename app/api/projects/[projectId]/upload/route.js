@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import projectStore from '../../../../../lib/projectStore';
+import vectorStore from '../../../../../lib/vectorStore';
 import { processDocument } from '../../../../../lib/utils/markdownProcessor';
 
 export async function POST(request, { params }) {
@@ -41,10 +42,30 @@ export async function POST(request, { params }) {
     );
     console.log('Page created:', page?.id);
     
+    // Generate vectors after page creation
+    let vectorGenerationSuccess = false;
+    try {
+      console.log('[Upload] Generating vectors for uploaded content...');
+      const project = await projectStore.getProject(params.projectId);
+      if (project.pages && project.pages.length > 0) {
+        await vectorStore.createOrUpdateProjectIndex(project);
+        console.log('[Upload] Vectors generated successfully');
+        vectorGenerationSuccess = true;
+      }
+    } catch (vectorError) {
+      console.error('[Upload] Vector store error:', vectorError);
+      console.error('[Upload] Vector generation failed - content saved to SQLite but search may be limited');
+      // Continue without vector store update - content is still saved in SQLite
+    }
+    
     return NextResponse.json({
       success: true,
       page: page,
-      projectId: params.projectId
+      projectId: params.projectId,
+      vectorGenerationSuccess: vectorGenerationSuccess,
+      message: vectorGenerationSuccess 
+        ? 'Document uploaded and indexed successfully' 
+        : 'Document uploaded successfully, but vector indexing failed. Content is available but search may be limited.'
     });
   } catch (error) {
     console.error('Error processing upload:', error);

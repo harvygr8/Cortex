@@ -6,6 +6,7 @@ module.exports = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './lib/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       container: {
@@ -13,7 +14,9 @@ module.exports = {
         padding: '1rem',
       },
       fontFamily: {
-        figtree: ['var(--font-figtree)'],
+        'pt-sans': ['var(--font-pt-sans)'],
+        'ibm-plex-sans': ['var(--font-ibm-plex-sans)'],
+        'source-sans-3': ['var(--font-source-sans-3)'], // Keep for backward compatibility
       },
     },
   },

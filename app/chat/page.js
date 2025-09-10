@@ -1,241 +1,314 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 import useProjectStore from '../../lib/stores/projectStore';
 import useThemeStore from '../../lib/stores/themeStore';
-import Breadcrumb from '../components/Breadcrumb';
-import Loader from '../components/Loader';
 import ChatLoader from '../components/ChatLoader';
+import Breadcrumb from '../components/Breadcrumb';
 import SourceBadge from '../components/SourceBadge';
-import FollowUpQuestions from '../components/FollowUpQuestions';
 
 export default function ChatPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [project, setProject] = useState(null);
-  const [error, setError] = useState(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+
   const messagesEndRef = useRef(null);
-  const router = useRouter();
   const activeProjectId = useProjectStore(state => state.activeProjectId);
-  const { isDarkMode, theme } = useThemeStore();
+  const { isDarkMode, colors } = useThemeStore();
+  const theme = isDarkMode ? colors.dark : colors.light;
 
   useEffect(() => {
     if (!activeProjectId) {
       router.push('/');
       return;
     }
+    fetchProject();
+    scrollToBottom();
+  }, [messages, activeProjectId, router]);
 
-    const initializeChat = async () => {
-      setIsInitializing(true);
-      try {
-        // First fetch project data
-        const projectRes = await fetch(`/api/projects/${activeProjectId}`);
-        const projectData = await projectRes.json();
-        if (!projectData) throw new Error('Project not found');
+  const fetchProject = async () => {
+    if (!activeProjectId) return;
+    
+    try {
+      const response = await fetch(`/api/projects/${activeProjectId}`);
+      if (response.ok) {
+        const projectData = await response.json();
         setProject(projectData);
-
-        // Then initialize vector store and wait for completion
-        const vectorRes = await fetch(`/api/projects/${activeProjectId}/vectors`, {
-          method: 'POST'
-        });
-        const vectorData = await vectorRes.json();
-        
-        if (!vectorData.success) {
-          throw new Error('Failed to initialize AI context');
-        }
-      } catch (err) {
-        console.error('Error initializing chat:', err);
-        setError(err.message);
-      } finally {
-        setIsInitializing(false);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching project:', error);
+    }
+  };
 
-    initializeChat();
-  }, [activeProjectId]);
-
-  useEffect(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || isLoading) return;
 
-    const userMessage = { type: 'user', content: input };
+    const userMessage = { role: 'user', content: input, timestamp: new Date() };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setLoading(true);
-    
-    // Add temporary loading message
-    setMessages(prev => [...prev, { type: 'loading' }]);
+    setIsLoading(true);
 
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           question: input,
-          projectId: activeProjectId 
+          projectId: activeProjectId
         }),
       });
-      
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
+        throw new Error('Failed to get response');
       }
 
-      const messageContent = data.answer || 'No response received';
+      const data = await response.json();
+      console.log('[Chat] Received API response:', data);
+      console.log('[Chat] Sources from API:', data.widgets?.sources);
       
-      // Remove loading message and add AI response
-      setMessages(prev => prev.filter(msg => msg.type !== 'loading').concat({
-        type: 'assistant',
-        content: messageContent,
-        widgets: data.widgets || { sources: [], followUpQuestions: [] }
-      }));
+      const aiMessage = {
+        role: 'assistant',
+        content: data.answer,
+        sources: data.widgets?.sources || [],
+        warning: data.warning || null,
+        timestamp: new Date()
+      };
+      
+      console.log('[Chat] Created AI message with sources:', aiMessage.sources);
+
+      setMessages(prev => [...prev, aiMessage]);
 
     } catch (error) {
-      console.error('Error sending message:', error);
-      // Remove loading message and add error message
-      setMessages(prev => prev.filter(msg => msg.type !== 'loading').concat({
-        type: 'assistant',
-        content: 'Sorry, there was an error processing your question.'
-      }));
+      console.error('Error:', error);
+      const errorMessage = {
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const breadcrumbItems = [
-    {
-      label: project?.title,
-      path: `/projects/${activeProjectId}`
-    },
-    {
-      label: 'Chat'
-    }
-  ];
 
-  if (!project || isInitializing) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="scale-150">
-          <ChatLoader />
-        </div>
-        <p className={`mt-4 ${isDarkMode ? theme.dark.secondary : theme.light.secondary}`}>
-          {isInitializing ? "Initializing AI context" : "Loading project"}
-        </p>
-      </div>
-    );
-  }
 
-  if (error) {
+  if (!activeProjectId) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <p className={`text-red-500 text-lg`}>
-          {error}
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className={`px-4 py-2 rounded-lg ${isDarkMode ? theme.dark.primary : theme.light.primary}`}
-        >
-          Try Again
-        </button>
+      <div className={`flex items-center justify-center min-h-screen ${theme.background}`}>
+        <p className={`text-lg ${theme.text}`}>No active project. Please select a project first.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-12rem)] flex flex-col p-4">
-      <div className="mb-8">
-        <Breadcrumb items={breadcrumbItems} />
-      </div>
-      
-      <div className={`flex-1 overflow-y-auto p-4 space-y-2 rounded-lg shadow mb-2 ${
-        isDarkMode ? theme.dark.background2 : theme.light.background2
-      }`}>
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
-          >
-            {message.type === 'loading' ? (
-              <ChatLoader />
-            ) : (
-              <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                  message.type === 'user'
-                    ? `${isDarkMode ? theme.dark.primary : theme.light.primary} text-white`
-                    : `${isDarkMode ? theme.dark.background : theme.light.background} ${isDarkMode ? theme.dark.text : theme.light.text}`
-                }`}
-              >
-                <div>{message.content}</div>
-                
-                {message.type === 'assistant' && message.widgets?.sources?.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {message.widgets.sources.map((source, idx) => (
-                      <span
-                        key={idx}
-                        className={`text-xs px-2 py-0.5 rounded-md text-white ${
-                          isDarkMode 
-                            ? `${theme.dark.primary}`
-                            : `${theme.light.primary}`
-                        }`}
-                      >
-                        {source.title}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {messages.length > 0 && messages[messages.length - 1].widgets?.followUpQuestions?.length > 0 && (
-        <div className="mb-2">
-          <FollowUpQuestions 
-            questions={messages[messages.length - 1].widgets.followUpQuestions}
-            onQuestionClick={(question) => {
-              setInput(question);
-            }}
-          />
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about your project..."
-          className={`flex-1 px-4 py-2 border rounded-lg ${
-            isDarkMode 
-              ? `${theme.dark.background2} ${theme.dark.border} ${theme.dark.text} placeholder-stone-500` 
-              : `${theme.light.background2} ${theme.light.border} ${theme.light.text} placeholder-stone-400`
-          }`}
-          disabled={loading}
+    <div className={`w-full h-[calc(100vh-0px)] ${theme.background} flex flex-col overflow-hidden`}>
+      {/* Breadcrumb Section */}
+      <div className="px-8 pt-6 pb-2">
+        <Breadcrumb 
+          items={[
+            { label: 'Projects', path: '/' },
+            { label: project?.title || 'Loading...', path: `/projects/${activeProjectId}` },
+            { label: 'Chat' }
+          ]} 
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className={`px-4 py-2 rounded-lg transition-opacity ${
-            isDarkMode ? theme.dark.primary : theme.light.primary
-          } ${isDarkMode ? theme.dark.hover.primary : theme.light.hover.primary} disabled:opacity-40`}
-        >
-          Send
-        </button>
-      </form>
+      </div>
+
+      {/* Chat Interface Section - Scrollable messages area */}
+      <div className={`flex-1 mx-4 my-3 rounded-lg overflow-hidden ${theme.background1}`}>
+        <div className="h-full flex flex-col">
+          {/* Messages container with scroll */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {messages.length === 0 ? (
+              // Empty state message
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className={`w-16 h-16 rounded-full shadow-md ${theme.background2} flex items-center justify-center mb-4`}>
+                  <svg 
+                    className={`w-8 h-8 ${theme.secondary}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
+                    />
+                  </svg>
+                </div>
+                <h3 className={`text-xl font-semibold font-source-sans-3 mb-2 ${theme.text}`}>
+                  Chat with your project
+                </h3>
+                <p className={`text-sm ${theme.secondary} max-w-md`}>
+                  Ask questions about your project content below. I'll help you find the information you need.
+                </p>
+              </div>
+            ) : (
+              // Existing messages
+              messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[75%] rounded-lg p-4 ${
+                      message.role === 'user'
+                        ? `${theme.chatBubble.user}`
+                        : `${theme.chatBubble.ai}`
+                    }`}
+                  >
+                    {message.role === 'assistant' ? (
+                      <div className="prose prose-sm max-w-none leading-relaxed">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={{
+                            // Custom styling for markdown elements with generous spacing and proper hierarchy
+                            h1: ({ children }) => <h1 className="text-2xl font-semibold font-source-sans-3 mb-4 mt-6 first:mt-0">{children}</h1>,
+                            h2: ({ children }) => <h2 className="text-xl font-semibold font-source-sans-3 mb-3 mt-5 first:mt-0">{children}</h2>,
+                            h3: ({ children }) => <h3 className="text-lg font-semibold font-source-sans-3 mb-3 mt-4 first:mt-0">{children}</h3>,
+                            h4: ({ children }) => <h4 className="text-base font-semibold font-source-sans-3 mb-2 mt-3 first:mt-0">{children}</h4>,
+                            h5: ({ children }) => <h5 className="text-sm font-semibold font-source-sans-3 mb-2 mt-2 first:mt-0">{children}</h5>,
+                            h6: ({ children }) => <h6 className="text-sm font-semibold font-source-sans-3 mb-2 mt-2 first:mt-0">{children}</h6>,
+                            p: ({ children }) => <p className="mb-4 last:mb-0 leading-relaxed text-sm">{children}</p>,
+                            ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-3 ml-3">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-3 ml-3">{children}</ol>,
+                            li: ({ children }) => <li className="text-sm leading-relaxed py-1">{children}</li>,
+                            code: ({ children, className }) => {
+                              const isInline = !className;
+                              return isInline ? (
+                                <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">
+                                  {children}
+                                </code>
+                              ) : (
+                                <code className={className}>{children}</code>
+                              );
+                            },
+                            pre: ({ children }) => (
+                              <pre className="bg-gray-100 dark:bg-gray-800 p-5 rounded-lg overflow-x-auto text-sm mb-4 border border-gray-200 dark:border-gray-700 my-4">
+                                {children}
+                              </pre>
+                            ),
+                            blockquote: ({ children }) => (
+                              <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-5 italic mb-4 bg-gray-50 dark:bg-gray-900/50 py-3 rounded-r my-4">
+                                {children}
+                              </blockquote>
+                            ),
+                            table: ({ children }) => (
+                              <div className="overflow-x-auto mb-4 my-4">
+                                <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 rounded-lg">
+                                  {children}
+                                </table>
+                              </div>
+                            ),
+                            th: ({ children }) => (
+                              <th className="border border-gray-300 dark:border-gray-600 px-4 py-3 bg-gray-100 dark:bg-gray-800 font-semibold text-sm">
+                                {children}
+                              </th>
+                            ),
+                            td: ({ children }) => (
+                              <td className="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm">
+                                {children}
+                              </td>
+                            ),
+                            strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                            em: ({ children }) => <em className="italic">{children}</em>,
+                            a: ({ href, children }) => (
+                              <a 
+                                href={href} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                {children}
+                              </a>
+                            ),
+                            hr: () => <hr className="my-6 border-gray-300 dark:border-gray-600" />,
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                    )}
+                    {message.sources && message.sources.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {message.sources.map((source, idx) => (
+                          <SourceBadge key={idx} source={source} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            {isLoading && <ChatLoader />}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+      </div>
+
+
+
+      {/* Chatbox Section - Compact height */}
+      <div className={`h-20 p-4 ${theme.border} flex-shrink-0`}>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask a question about your project..."
+              className={`flex-1 px-4 py-3 rounded-lg shadow-md text-sm ${theme.input} focus:outline-none focus:ring-2 ${theme.focusRing} focus:border-transparent`}
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className={`px-6 py-3 rounded-lg text-sm font-medium ${theme.button} disabled:opacity-50 hover:opacity-80 transition-opacity flex items-center gap-2`}
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </>
+              ) : (
+                <>
+                  <svg 
+                    className="w-4 h-4" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
+                    />
+                  </svg>
+                  Send
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 } 

@@ -1,40 +1,98 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function MarkdownPreview({ content, onChange, isPreview }) {
-  const { isDarkMode, theme } = useThemeStore();
+export default function MarkdownPreview({ content, isEditing, onSave, onCancel }) {
+  const [editedContent, setEditedContent] = useState(content);
+  const { isDarkMode, colors } = useThemeStore();
+  const theme = isDarkMode ? colors.dark : colors.light;
 
-  const parseMarkdown = (text) => {
-    return text
-      .replace(/#{3} (.*)/g, '<h3>$1</h3>')
-      .replace(/#{2} (.*)/g, '<h2>$1</h2>')
-      .replace(/#{1} (.*)/g, '<h1>$1</h1>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/\n/g, '<br>');
+  useEffect(() => {
+    setEditedContent(content);
+  }, [content]);
+
+  const handleSave = () => {
+    onSave(editedContent);
   };
 
-  return (
-    <div className="h-[calc(100vh-24rem)] flex flex-col">
-      <div className="flex-1 overflow-y-auto">
-        {isPreview ? (
-          <div
-            className={`prose ${isDarkMode ? 'prose-invert' : ''} max-w-none`}
-            dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
-          />
-        ) : (
-          <textarea
-            value={content}
-            onChange={(e) => onChange(e.target.value)}
-            className={`w-full h-full resize-none bg-transparent focus:outline-none ${
-              isDarkMode ? theme.dark.text : theme.light.text
-            }`}
-          />
-        )}
+  const handleCancel = () => {
+    setEditedContent(content);
+    onCancel();
+  };
+
+  const parseMarkdown = (text) => {
+    if (!text) return '';
+    
+    return text
+      // Headers
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold font-source-sans-3 mt-4 mb-2">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold font-source-sans-3 mt-6 mb-3">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-semibold font-source-sans-3 mt-8 mb-4">$1</h1>')
+      
+      // Bold and italic
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+      
+      // Code blocks
+      .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto my-4"><code>$1</code></pre>')
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm">$1</code>')
+      
+      // Lists
+      .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/(<li.*<\/li>)/s, '<ul class="list-disc my-2">$1</ul>')
+      
+      // Numbered lists
+      .replace(/^\d+\. (.*$)/gim, '<li class="ml-4">$1</li>')
+      .replace(/(<li.*<\/li>)/s, '<ol class="list-decimal my-2">$1</ol>')
+      
+      // Links
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
+      
+      // Line breaks
+      .replace(/\n\n/g, '</p><p class="my-2">')
+      .replace(/\n/g, '<br>')
+      
+      // Wrap in paragraph tags
+      .replace(/^(.+)$/gm, '<p class="my-2">$1</p>')
+      .replace(/<p class="my-2"><\/p>/g, '')
+      .replace(/<p class="my-2"><br><\/p>/g, '');
+  };
+
+  if (isEditing) {
+    return (
+      <div className="space-y-4">
+        <textarea
+          value={editedContent}
+          onChange={(e) => setEditedContent(e.target.value)}
+          className={`w-full h-[40rem] p-4 rounded-lg border resize-none ${theme.input}`}
+          placeholder="Write your content here..."
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            className={`px-4 py-2 rounded ${theme.button}`}
+          >
+            Save
+          </button>
+          <button
+            onClick={handleCancel}
+            className={`px-4 py-2 rounded ${theme.button}`}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className={`prose max-w-none ${theme.text}`}>
+      <div 
+        className="markdown-content"
+        dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
+      />
     </div>
   );
 } 

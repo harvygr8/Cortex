@@ -37,6 +37,25 @@ export async function DELETE(request, { params }) {
   try {
     await projectStore.initialize();
     await projectStore.deletePage(params.pageId);
+    
+    // Regenerate vectors after page deletion to remove deleted content
+    try {
+      console.log('[Delete Page] Regenerating vectors after page deletion...');
+      const project = await projectStore.getProject(params.projectId);
+      if (project.pages && project.pages.length > 0) {
+        await vectorStore.createOrUpdateProjectIndex(project);
+        console.log('[Delete Page] Vectors regenerated successfully');
+      } else {
+        // If no pages left, clear the entire vector index
+        console.log('[Delete Page] No pages remaining, clearing vector index...');
+        await vectorStore.clearProjectIndex(params.projectId);
+        console.log('[Delete Page] Vector index cleared');
+      }
+    } catch (vectorError) {
+      console.error('[Delete Page] Vector store error (non-fatal):', vectorError);
+      // Continue without vector store update
+    }
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting page:', error);
