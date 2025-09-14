@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FaTimes, FaPlus } from 'react-icons/fa';
+import { X, Plus } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
 export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
@@ -52,15 +52,15 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
       `}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200/30">
-          <h2 className={`text-lg font-semibold font-source-sans-3 ${theme.text} flex items-center gap-2`}>
-            <FaPlus className={`w-4 h-4 ${theme.accent}`} />
+          <h2 className={`text-lg font-semibold font-ibm-plex-sans ${theme.text} flex items-center gap-2`}>
+            <Plus className={`w-4 h-4 ${theme.accent}`} />
             Add Page to {project.title}
           </h2>
           <button
             onClick={onClose}
             className={`p-1 rounded hover:${theme.background} transition-colors`}
           >
-            <FaTimes className={`w-4 h-4 ${theme.secondary}`} />
+            <X className={`w-4 h-4 ${theme.secondary}`} />
           </button>
         </div>
 

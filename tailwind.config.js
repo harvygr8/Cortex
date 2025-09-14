@@ -23,16 +23,19 @@ module.exports = {
   plugins: [],
   safelist: [
     {
-      pattern: /bg-(gray|green)-(50|100|200|300|400|500|600|700|800|900)/,
+      pattern: /bg-(gray|green|neutral|blue|amber|emerald)-(50|100|200|300|400|500|600|700|800|900)/,
       variants: ['hover'],
     },
     {
-      pattern: /text-(gray|green)-(50|100|200|300|400|500|600|700|800|900)/,
+      pattern: /text-(gray|green|neutral|blue|amber|emerald)-(50|100|200|300|400|500|600|700|800|900)/,
       variants: ['hover'],
     },
     {
-      pattern: /border-(gray|green)-(50|100|200|300|400|500|600|700|800|900)/,
+      pattern: /border-(gray|green|neutral|blue|amber|emerald)-(50|100|200|300|400|500|600|700|800|900)/,
       variants: ['hover'],
-    }
+    },
+    'line-clamp-1',
+    'line-clamp-2',
+    'line-clamp-3'
   ]
 }

@@ -26,9 +26,9 @@ export default function MarkdownPreview({ content, isEditing, onSave, onCancel }
     
     return text
       // Headers
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold font-source-sans-3 mt-4 mb-2">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold font-source-sans-3 mt-6 mb-3">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-semibold font-source-sans-3 mt-8 mb-4">$1</h1>')
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold font-ibm-plex-sans mt-4 mb-2">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-semibold font-ibm-plex-sans mt-6 mb-3">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-semibold font-ibm-plex-sans mt-8 mb-4">$1</h1>')
       
       // Bold and italic
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')

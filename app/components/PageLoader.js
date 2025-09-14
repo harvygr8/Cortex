@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
 export default function PageLoader() {
@@ -9,8 +10,7 @@ export default function PageLoader() {
   return (
     <div className={`flex items-center justify-center min-h-screen ${theme.background}`}>
       <div className="relative">
-        <div className={`w-8 h-8 rounded-full border-4 ${theme.border}`}></div>
-        <div className={`w-8 h-8 rounded-full border-4 border-t-current animate-spin absolute top-0 left-0 ${theme.text}`}></div>
+        <Loader2 className={`w-8 h-8 animate-spin ${theme.text}`} />
       </div>
     </div>
   );

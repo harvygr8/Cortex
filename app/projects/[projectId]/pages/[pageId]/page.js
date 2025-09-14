@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { X, Edit } from 'lucide-react';
 import useProjectStore from '../../../../../lib/stores/projectStore';
 import useThemeStore from '../../../../../lib/stores/themeStore';
 import MarkdownPreview from '../../../../components/MarkdownPreview';
@@ -117,32 +118,27 @@ export default function PageDetail() {
       <div className="px-8 pt-6 pl-12 pb-20">
         <Breadcrumb 
           items={[
-            { label: 'Projects', path: '/' },
-            { label: project?.title || 'Loading...', path: `/projects/${projectId}` },
+            { label: project?.title || 'Project', path: '/' },
             { label: page?.title || 'Loading...' }
           ]} 
         />
         {/* Fixed overlay buttons */}
-        <div className="fixed top-4 right-4 z-50 flex gap-2 bg-black/5 dark:bg-white/5 backdrop-blur-sm rounded-lg p-1">
+        <div className="fixed top-4 right-4 z-50 flex gap-2">
           {isEditing ? (
             <button
               onClick={() => setIsEditing(false)}
-              className={`p-3 rounded-lg shadow-lg ${theme.button} hover:opacity-80 transition-opacity backdrop-blur-sm`}
+              className={`p-3 rounded-lg shadow-lg ${theme.button} hover:opacity-80 transition-opacity `}
               title="Cancel Edit"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="w-5 h-5" />
             </button>
           ) : (
             <button
               onClick={() => setIsEditing(true)}
-              className={`p-3 rounded-lg shadow-lg ${theme.button} hover:opacity-80 transition-opacity backdrop-blur-sm`}
+              className={`p-3 rounded-lg shadow-lg ${theme.button} hover:opacity-80 transition-opacity `}
               title="Edit Page"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
+              <Edit className="w-5 h-5" />
             </button>
           )}
           {!isEditing && (

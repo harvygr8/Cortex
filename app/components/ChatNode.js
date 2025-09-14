@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import { FaComments } from 'react-icons/fa';
+import { MessageSquare, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import useThemeStore from '../../lib/stores/themeStore';
@@ -31,8 +31,8 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
         h-full flex flex-col w-full relative
         ${theme.background2}
         border-2 ${selected 
-          ? 'border-blue-500 ring-2 ring-blue-300/50' 
-          : 'border-blue-300/50'
+          ? `${theme.selection.border} ${theme.selection.ring}` 
+          : theme.hover.blueStrong
         }
       `}>
         {/* Target handles positioned on the card boundaries */}
@@ -98,20 +98,20 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
         />
         {/* Chat Header */}
         <div className="flex justify-between items-start mb-4 cursor-move">
-          <h3 className={`text-lg font-semibold font-source-sans-3 line-clamp-1 ${theme.text} flex items-center gap-2`}>
-            <FaComments className={`w-4 h-4 ${theme.accent}`} />
-            Chat Response
+          <h3 className={`text-lg font-semibold font-ibm-plex-sans line-clamp-1 ${theme.text} flex items-center gap-2`}>
+            <MessageSquare className={`w-4 h-4 ${theme.accent}`} />
+            Q/A
           </h3>
           <button
             onClick={() => onDelete(chatCard.id)}
-            className={`text-sm ${theme.secondary} hover:text-red-500 transition-colors`}
+            className={`text-sm ${theme.secondary} ${theme.dangerHover} transition-colors`}
           >
-            ✕
+            <X className="w-3 h-3" />
           </button>
         </div>
 
         {/* Query Section */}
-        <div className="mb-4 p-3 rounded bg-gray-50/50 dark:bg-gray-800/50 border border-gray-200/30">
+        <div className={`mb-4 p-3 rounded ${theme.background} border ${theme.border}`}>
           <p className={`text-sm ${theme.text} italic leading-relaxed`}>
             {chatCard.query}
           </p>
@@ -125,9 +125,9 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
               components={{
                 // Custom styling for markdown elements
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                h1: ({ children }) => <h1 className={`text-lg font-semibold font-source-sans-3 mb-2 ${theme.text}`}>{children}</h1>,
-                h2: ({ children }) => <h2 className={`text-base font-semibold font-source-sans-3 mb-2 ${theme.text}`}>{children}</h2>,
-                h3: ({ children }) => <h3 className={`text-sm font-semibold font-source-sans-3 mb-1 ${theme.text}`}>{children}</h3>,
+                h1: ({ children }) => <h1 className={`text-lg font-semibold font-ibm-plex-sans mb-2 ${theme.text}`}>{children}</h1>,
+                h2: ({ children }) => <h2 className={`text-base font-semibold font-ibm-plex-sans mb-2 ${theme.text}`}>{children}</h2>,
+                h3: ({ children }) => <h3 className={`text-sm font-semibold font-ibm-plex-sans mb-1 ${theme.text}`}>{children}</h3>,
                 ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
                 ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
                 li: ({ children }) => <li className="text-sm">{children}</li>,
@@ -144,7 +144,7 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
                   );
                 },
                 blockquote: ({ children }) => (
-                  <blockquote className={`border-l-4 border-gray-300 pl-3 py-1 my-2 ${theme.secondary} italic`}>
+                  <blockquote className={`border-l-4 ${theme.border} pl-3 py-1 my-2 ${theme.secondary} italic`}>
                     {children}
                   </blockquote>
                 ),
@@ -158,7 +158,7 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
           
           {/* Sources Section */}
           {chatCard.sources && chatCard.sources.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-200/30">
+            <div className={`mt-3 pt-3 border-t ${theme.border}`}>
               <div className="flex flex-wrap gap-1.5">
                 {chatCard.sources.map((source, idx) => (
                   <SourceBadge key={idx} source={source} />

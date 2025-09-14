@@ -1,31 +1,80 @@
-'use client';
+'use client';
 
-import { memo } from 'react';
-import { Handle, Position } from 'reactflow';
-import Link from 'next/link';
-import useThemeStore from '../../lib/stores/themeStore';
+import { memo } from 'react';
+import { Handle, Position } from 'reactflow';
+import { FileText } from 'lucide-react';
+import useThemeStore from '../../lib/stores/themeStore';
 
 const ProjectNode = memo(({ data, isConnectable, selected }) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const { project, pages, onContextMenu } = data;
 
+  // Calculate dynamic height based on content
+  const calculateNodeHeight = () => {
+    const headerHeight = 80; // Header section height
+    const minContentHeight = 120; // Minimum content area for empty state
+    const pageBlockHeight = 72; // Height of each page block
+    const pageBlockGap = 8; // Gap between page blocks
+    const padding = 24; // Total padding (top + bottom)
+    
+    if (pages.length === 0) {
+      return headerHeight + minContentHeight + padding;
+    }
+    
+    // Calculate number of rows (2 columns per row, plus "more" block if needed)
+    const displayedPages = Math.min(pages.length, 8);
+    const hasMoreBlock = pages.length > 8 ? 1 : 0;
+    const totalBlocks = displayedPages + hasMoreBlock;
+    const rows = Math.ceil(totalBlocks / 2);
+    
+    // Calculate content height based on rows
+    const contentHeight = (rows * pageBlockHeight) + ((rows - 1) * pageBlockGap);
+    const totalHeight = headerHeight + contentHeight + padding;
+    
+    // Set reasonable min/max bounds
+    return Math.max(200, Math.min(500, totalHeight));
+  };
+
+  const nodeHeight = calculateNodeHeight();
+
+  // Simple function to strip markdown and get clean preview text
+  const getCleanPreviewText = (content) => {
+    if (!content) return '';
+    return content
+      .replace(/#{1,6}\s/g, '') // Remove headers
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
+      .replace(/\*(.*?)\*/g, '$1') // Remove italic
+      .replace(/`([^`]+)`/g, '$1') // Remove inline code
+      .replace(/```[\s\S]*?```/g, '[code block]') // Replace code blocks
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links, keep text
+      .replace(/^\* /gm, '• ') // Convert bullets
+      .replace(/^\d+\. /gm, '') // Remove numbered lists
+      .trim();
+  };
+
   return (
     <div 
       className="project-node relative"
       onContextMenu={(e) => onContextMenu(e, project)}
-      style={{ minWidth: '420px', minHeight: '320px' }}
+      style={{ width: '420px', height: `${nodeHeight}px` }}
     >
-      <div className={`
-        p-4 rounded-lg shadow-md hover:shadow-lg transition-all 
-        h-full flex flex-col w-full relative
-        ${theme.background2}
-        border-2 ${selected 
-          ? 'border-blue-500 ring-2 ring-blue-300/50' 
-          : 'border-gray-300/30 hover:border-blue-300/50'
-        }
-      `}>
-        {/* Source handles positioned on the card boundaries */}
+      <div 
+        className={`
+          rounded-lg shadow-md hover:shadow-lg transition-all 
+          w-full h-full relative grid grid-rows-[auto,1fr]
+          border-2 ${selected 
+            ? 'border-blue-500 ring-2 ring-blue-300/50' 
+            : 'border-gray-300/30 hover:border-blue-300/50'
+          }
+        `}
+        style={{ 
+          backgroundColor: isDarkMode ? '#262626' : '#ffffff',
+          width: '420px',
+          height: `${nodeHeight}px`
+        }}
+      >
+        {/* Source handles positioned absolutely outside the content flow */}
         <Handle
           type="source"
           position={Position.Left}
@@ -38,7 +87,9 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             border: '2px solid white',
             left: '-6px',
             top: '50%',
-            transform: 'translateY(-50%)'
+            transform: 'translateY(-50%)',
+            position: 'absolute',
+            zIndex: 1000
           }}
         />
         <Handle
@@ -53,7 +104,9 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             border: '2px solid white',
             right: '-6px',
             top: '50%',
-            transform: 'translateY(-50%)'
+            transform: 'translateY(-50%)',
+            position: 'absolute',
+            zIndex: 1000
           }}
         />
         <Handle
@@ -68,7 +121,9 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             border: '2px solid white',
             top: '-6px',
             left: '50%',
-            transform: 'translateX(-50%)'
+            transform: 'translateX(-50%)',
+            position: 'absolute',
+            zIndex: 1000
           }}
         />
         <Handle
@@ -83,106 +138,115 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             border: '2px solid white',
             bottom: '-6px',
             left: '50%',
-            transform: 'translateX(-50%)'
+            transform: 'translateX(-50%)',
+            position: 'absolute',
+            zIndex: 1000
           }}
         />
-        {/* Project Header */}
-        <div className="flex justify-between items-start mb-4 cursor-move">
-          <h3 className={`text-lg font-semibold font-source-sans-3 line-clamp-1 ${theme.text}`}>
-            {project.title}
-          </h3>
-          <span className={`text-sm whitespace-nowrap ml-2 ${theme.secondary} flex items-center gap-1`}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {pages.length}
-          </span>
-        </div>
-
-        {/* Project Description */}
-        {project.description && (
-          <div className="mb-3 cursor-move">
-            <p className={`text-xs ${theme.secondary} line-clamp-2`}>
+        {/* Header Row */}
+        <div className="px-3 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className={`text-lg font-semibold font-ibm-plex-sans line-clamp-1 ${theme.text} flex-1`}>
+              {project.title}
+            </h3>
+            <span className={`text-sm whitespace-nowrap ${theme.secondary} flex items-center gap-1`}>
+              <FileText className="w-4 h-4" />
+              {pages.length}
+            </span>
+          </div>
+          {project.description && (
+            <p className={`text-xs ${theme.secondary} line-clamp-2 mt-2`}>
               {project.description}
             </p>
-          </div>
-        )}
-
-        {/* Pages Container */}
-        <div className="flex-1 overflow-y-auto">
+          )}
+        </div>
+        {/* Content Row */}
+        <div className="px-3">
           {pages.length === 0 ? (
-            <div className={`p-4 rounded ${theme.background} text-center`}>
-              <p className={`text-sm ${theme.secondary}`}>
-                No pages yet
-              </p>
-              <Link href={`/projects/${project.id}`} className={`text-xs ${theme.accent} hover:underline`}>
-                Add first page →
-              </Link>
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <p className={`text-sm ${theme.secondary} mb-2`}>
+                  No pages yet
+                </p>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (data.onPageClick) {
+                      data.onPageClick(null, 'add-page');
+                    }
+                  }}
+                  className={`text-xs ${theme.accent} hover:underline cursor-pointer`}
+                >
+                  Add first page →
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {pages.slice(0, 8).map((page) => (
-                <Link 
-                  key={page.id} 
-                  href={`/projects/${project.id}/pages/${page.id}`}
-                  className="block"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className={`
-                    p-3 rounded border transition-all hover:shadow-md
-                    ${theme.background} border-gray-200/50 hover:border-blue-200/70
-                    cursor-pointer
-                  `}>
-                    <h4 className={`text-sm font-medium font-source-sans-3 ${theme.text} line-clamp-1`}>
-                      {page.title}
-                    </h4>
-                    {page.content && (
-                      <p className={`text-xs ${theme.secondary} line-clamp-2 mt-1`}>
-                        {page.content}
+            <div className="h-full overflow-auto">
+              <div className="grid grid-cols-2 gap-2">
+                {pages.slice(0, 8).map((page) => (
+                  <div 
+                    key={page.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (data.onPageClick) {
+                        data.onPageClick(page.id, 'view-page');
+                      }
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <div 
+                      className="p-3 rounded border transition-all hover:shadow-sm hover:scale-[1.02]"
+                      style={{ 
+                        backgroundColor: isDarkMode ? '#171717' : '#f5f5f5',
+                        borderColor: isDarkMode ? '#404040' : '#e5e5e5',
+                        height: '72px'
+                      }}
+                    >
+                      <h4 className={`text-xs font-medium font-ibm-plex-sans ${theme.text} line-clamp-1 mb-1`}>
+                        {page.title}
+                      </h4>
+                      {page.content && (
+                        <p className={`text-xs ${theme.secondary} line-clamp-2 leading-tight`}>
+                          {getCleanPreviewText(page.content)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {pages.length > 8 && (
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (data.onPageClick) {
+                        data.onPageClick(null, 'view-all-pages');
+                      }
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <div 
+                      className="p-3 rounded border transition-all hover:shadow-sm hover:scale-[1.02] text-center flex items-center justify-center"
+                      style={{ 
+                        backgroundColor: isDarkMode ? '#171717' : '#f5f5f5',
+                        borderColor: isDarkMode ? '#404040' : '#e5e5e5',
+                        height: '72px'
+                      }}
+                    >
+                      <p className={`text-xs ${theme.secondary} font-medium`}>
+                        +{pages.length - 8} more
                       </p>
-                    )}
+                    </div>
                   </div>
-                </Link>
-              ))}
-              {pages.length > 8 && (
-                <Link 
-                  href={`/projects/${project.id}`}
-                  className="block"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className={`
-                    p-3 rounded border transition-all hover:shadow-md text-center
-                    ${theme.background} border-gray-200/50 hover:border-blue-200/70
-                    cursor-pointer
-                  `}>
-                    <p className={`text-xs ${theme.secondary}`}>
-                      +{pages.length - 8} more pages
-                    </p>
-                  </div>
-                </Link>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
-
-        {/* Project Footer */}
-        <div className="mt-3 pt-2 border-t border-gray-200/30 cursor-move">
-          <p className={`text-xs ${theme.secondary}`}>
-            {project.created_at
-              ? new Date(project.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric'
-                })
-              : 'Recently created'
-            }
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+      </div>
+    </div>
+  );
 });
 
-ProjectNode.displayName = 'ProjectNode';
+ProjectNode.displayName = 'ProjectNode';
 
-export default ProjectNode;
+export default ProjectNode;

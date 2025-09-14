@@ -49,7 +49,16 @@ export async function DELETE(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     await projectStore.initialize();
-    const { title, description } = await request.json();
+    const body = await request.json();
+    
+    // Handle position updates separately from metadata updates
+    if (body.positionX !== undefined && body.positionY !== undefined) {
+      await projectStore.updateProjectPosition(params.projectId, body.positionX, body.positionY);
+      return NextResponse.json({ success: true });
+    }
+    
+    // Handle metadata updates (title, description)
+    const { title, description } = body;
     const project = await projectStore.updateProject(params.projectId, title, description);
     
     if (!project) {

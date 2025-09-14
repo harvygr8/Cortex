@@ -21,12 +21,12 @@ export default function Breadcrumb({ items, showLargeTitle = true }) {
           {item.path ? (
             <button
               onClick={() => router.push(item.path)}
-              className={`text-sm hover:underline focus:outline-none ${theme.text} hover:${theme.accent}`}
+              className={`${getBodyClasses('body')} hover:underline focus:outline-none ${theme.text} hover:${theme.accent}`}
             >
               {item.label}
             </button>
           ) : (
-            <span className={`${showLargeTitle && index === items.length - 1 ? getHeadingClasses('h1') : getBodyClasses('bodySmall')} ${theme.text}`}>
+            <span className={`${getBodyClasses('body')} font-semibold ${theme.text}`}>
               {item.label}
             </span>
           )}

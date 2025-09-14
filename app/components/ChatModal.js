@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaTimes, FaPaperPlane } from 'react-icons/fa';
+import { X, Send } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
 export default function ChatModal({ isOpen, onClose, onSubmit, projectTitle, initialQuery }) {
@@ -49,14 +49,14 @@ export default function ChatModal({ isOpen, onClose, onSubmit, projectTitle, ini
       <div className={`${theme.background2} rounded-lg shadow-xl w-full max-w-md mx-4`}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200/30">
-          <h3 className={`text-lg font-semibold font-source-sans-3 ${theme.text}`}>
+          <h3 className={`text-lg font-semibold font-ibm-plex-sans ${theme.text}`}>
             Chat with "{projectTitle}"
           </h3>
           <button
             onClick={onClose}
             className={`p-1 rounded hover:${theme.background} transition-colors ${theme.secondary}`}
           >
-            <FaTimes className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -98,7 +98,7 @@ export default function ChatModal({ isOpen, onClose, onSubmit, projectTitle, ini
                 </>
               ) : (
                 <>
-                  <FaPaperPlane className="w-4 h-4" />
+                  <Send className="w-4 h-4" />
                   Ask
                 </>
               )}

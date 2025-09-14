@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { FaTrash, FaCopy, FaDownload } from 'react-icons/fa';
+import { Trash2, Copy, Download, Unlink } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
 export default function ChatContextMenu({ 
@@ -10,7 +10,8 @@ export default function ChatContextMenu({
   onClose, 
   onDelete, 
   onCopyResponse, 
-  onExportToFile 
+  onExportToFile,
+  onDetach
 }) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
@@ -40,29 +41,35 @@ export default function ChatContextMenu({
 
   const menuItems = [
     {
-      icon: FaCopy,
+      icon: Copy,
       label: 'Copy response',
       onClick: onCopyResponse,
       color: theme.text
     },
     {
-      icon: FaDownload,
+      icon: Download,
       label: 'Export to file',
       onClick: onExportToFile,
       color: theme.text
     },
     {
-      icon: FaTrash,
+      icon: Unlink,
+      label: 'Detach from project',
+      onClick: onDetach,
+      color: theme.text
+    },
+    {
+      icon: Trash2,
       label: 'Delete chat',
       onClick: onDelete,
-      color: 'text-red-500'
+      color: theme.danger
     }
   ];
 
   return (
     <div
       ref={menuRef}
-      className={`fixed z-50 ${theme.background2} border border-gray-200/30 rounded-lg shadow-lg py-2 min-w-48`}
+      className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
       style={{
         left: x,
         top: y,
