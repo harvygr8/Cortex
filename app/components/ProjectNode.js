@@ -63,13 +63,13 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
         className={`
           rounded-lg shadow-md hover:shadow-lg transition-all 
           w-full h-full relative grid grid-rows-[auto,1fr]
+          ${theme.background2}
           border-2 ${selected 
             ? 'border-blue-500 ring-2 ring-blue-300/50' 
-            : 'border-gray-300/30 hover:border-blue-300/50'
+            : `${theme.border} hover:border-blue-300/50`
           }
         `}
         style={{ 
-          backgroundColor: isDarkMode ? '#262626' : '#ffffff',
           width: '420px',
           height: `${nodeHeight}px`
         }}
@@ -146,7 +146,7 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
         {/* Header Row */}
         <div className="px-3 py-3">
           <div className="flex items-center justify-between gap-2">
-            <h3 className={`text-lg font-semibold font-ibm-plex-sans line-clamp-1 ${theme.text} flex-1`}>
+            <h3 className={`text-lg font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} line-clamp-1 ${theme.text} flex-1`}>
               {project.title}
             </h3>
             <span className={`text-sm whitespace-nowrap ${theme.secondary} flex items-center gap-1`}>
@@ -155,7 +155,7 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             </span>
           </div>
           {project.description && (
-            <p className={`text-xs ${theme.secondary} line-clamp-2 mt-2`}>
+            <p className={`text-xs ${theme.secondary} line-clamp-1 mt-2`}>
               {project.description}
             </p>
           )}
@@ -196,14 +196,12 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
                     className="cursor-pointer"
                   >
                     <div 
-                      className="p-3 rounded border transition-all hover:shadow-sm hover:scale-[1.02]"
+                      className={`p-3 rounded border transition-all hover:shadow-sm hover:scale-[1.02] ${theme.background} ${theme.border}`}
                       style={{ 
-                        backgroundColor: isDarkMode ? '#171717' : '#f5f5f5',
-                        borderColor: isDarkMode ? '#404040' : '#e5e5e5',
                         height: '72px'
                       }}
                     >
-                      <h4 className={`text-xs font-medium font-ibm-plex-sans ${theme.text} line-clamp-1 mb-1`}>
+                      <h4 className={`text-xs font-medium ${theme.font?.body || 'font-ibm-plex-sans'} ${theme.text} line-clamp-1 mb-1`}>
                         {page.title}
                       </h4>
                       {page.content && (
@@ -225,10 +223,8 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
                     className="cursor-pointer"
                   >
                     <div 
-                      className="p-3 rounded border transition-all hover:shadow-sm hover:scale-[1.02] text-center flex items-center justify-center"
+                      className={`p-3 rounded border transition-all hover:shadow-sm hover:scale-[1.02] text-center flex items-center justify-center ${theme.background} ${theme.border}`}
                       style={{ 
-                        backgroundColor: isDarkMode ? '#171717' : '#f5f5f5',
-                        borderColor: isDarkMode ? '#404040' : '#e5e5e5',
                         height: '72px'
                       }}
                     >

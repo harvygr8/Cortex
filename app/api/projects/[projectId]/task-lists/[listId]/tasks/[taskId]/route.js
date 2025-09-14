@@ -38,12 +38,12 @@ export async function PUT(request, { params }) {
       );
     }
 
-    await projectStore.updateTask(
-      params.taskId,
-      text !== undefined ? text : task.text,
-      completed !== undefined ? completed : task.completed,
-      orderIndex !== undefined ? orderIndex : task.order_index
-    );
+    const updates = {};
+    if (text !== undefined) updates.text = text;
+    if (completed !== undefined) updates.completed = completed;
+    if (orderIndex !== undefined) updates.order_index = orderIndex;
+    
+    await projectStore.updateTask(params.taskId, updates);
 
     const updatedTask = await projectStore.getTask(params.taskId);
     return NextResponse.json(updatedTask);

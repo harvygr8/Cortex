@@ -449,7 +449,7 @@ function ProjectCanvasFlow({ projects }) {
       return filteredEdges;
     });
     
-    toast.success(`${nodeType === 'chatNode' ? 'Chat' : 'Task list'} detached from project`);
+    toast.success(`${nodeType === 'chatNode' ? 'Q/A Node' : 'Task Node'} detached from project`);
   }, [setEdges]);
 
   // Delete chat node
@@ -1231,9 +1231,33 @@ function ProjectCanvasFlow({ projects }) {
   }, [isDarkMode, handleTasksContextMenu, setNodes, setEdges]);
 
 
+  // Helper function to check if a child node is already connected to a project
+  const isChildNodeAlreadyConnected = useCallback((targetNodeId) => {
+    return edges.some(edge => {
+      const targetNode = nodes.find(n => n.id === edge.target);
+      const sourceNode = nodes.find(n => n.id === edge.source);
+      
+      // Check if this edge connects a project node to the target child node
+      return edge.target === targetNodeId && sourceNode?.type === 'projectNode';
+    });
+  }, [edges, nodes]);
+
   // Edge connection handler - handles manual reconnections
   const onConnect = useCallback((params) => {
     console.log('[ProjectCanvas] New connection created:', params);
+    
+    // Find source and target nodes
+    const sourceNode = nodes.find(n => n.id === params.source);
+    const targetNode = nodes.find(n => n.id === params.target);
+    
+    // Check if trying to connect from a project node to a child node that's already connected
+    if (sourceNode?.type === 'projectNode' && targetNode && (targetNode.type === 'chatNode' || targetNode.type === 'tasksNode')) {
+      if (isChildNodeAlreadyConnected(params.target)) {
+        console.log('[ProjectCanvas] Connection blocked: Child node already connected to a project');
+        toast.error('This node already has a connection to a project');
+        return; // Prevent the connection
+      }
+    }
     
     // Add the edge visually
     setEdges((eds) => {
@@ -1251,8 +1275,6 @@ function ProjectCanvasFlow({ projects }) {
     });
     
     // Save the connection to database if it's between a project and a chat/task node
-    const sourceNode = nodes.find(n => n.id === params.source);
-    const targetNode = nodes.find(n => n.id === params.target);
     
     if (sourceNode?.type === 'projectNode' && targetNode) {
       // Extract new project ID from source node
@@ -1347,9 +1369,9 @@ function ProjectCanvasFlow({ projects }) {
       // Determine action type based on whether this is a cross-project transfer
       const oldProjectId = targetNode.data.chatCard?.projectId || targetNode.data.tasksCard?.projectId;
       const actionType = oldProjectId !== newProjectId ? 'transferred to' : 'reconnected to';
-      toast.success(`${targetNode.type === 'chatNode' ? 'Chat' : 'Task list'} ${actionType} project`);
+      toast.success(`${targetNode.type === 'chatNode' ? 'Q/A Node' : 'Task Node'} ${actionType} project`);
     }
-  }, [setEdges, isDarkMode, nodes]);
+  }, [setEdges, isDarkMode, nodes, isChildNodeAlreadyConnected]);
 
   // Handle selection events
   const onSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }) => {

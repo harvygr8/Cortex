@@ -31,8 +31,8 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
         h-full flex flex-col w-full relative
         ${theme.background2}
         border-2 ${selected 
-          ? `${theme.selection.border} ${theme.selection.ring}` 
-          : theme.hover.blueStrong
+          ? 'border-blue-500 ring-2 ring-blue-300/50' 
+          : theme.border
         }
       `}>
         {/* Target handles positioned on the card boundaries */}
@@ -98,13 +98,13 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
         />
         {/* Chat Header */}
         <div className="flex justify-between items-start mb-4 cursor-move">
-          <h3 className={`text-lg font-semibold font-ibm-plex-sans line-clamp-1 ${theme.text} flex items-center gap-2`}>
+          <h3 className={`text-lg font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} line-clamp-1 ${theme.text} flex items-center gap-2`}>
             <MessageSquare className={`w-4 h-4 ${theme.accent}`} />
             Q/A
           </h3>
           <button
             onClick={() => onDelete(chatCard.id)}
-            className={`text-sm ${theme.secondary} ${theme.dangerHover} transition-colors`}
+            className={`text-sm ${theme.secondary} hover:text-red-500 transition-colors`}
           >
             <X className="w-3 h-3" />
           </button>
@@ -125,9 +125,9 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
               components={{
                 // Custom styling for markdown elements
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                h1: ({ children }) => <h1 className={`text-lg font-semibold font-ibm-plex-sans mb-2 ${theme.text}`}>{children}</h1>,
-                h2: ({ children }) => <h2 className={`text-base font-semibold font-ibm-plex-sans mb-2 ${theme.text}`}>{children}</h2>,
-                h3: ({ children }) => <h3 className={`text-sm font-semibold font-ibm-plex-sans mb-1 ${theme.text}`}>{children}</h3>,
+                h1: ({ children }) => <h1 className={`text-lg font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} mb-2 ${theme.text}`}>{children}</h1>,
+                h2: ({ children }) => <h2 className={`text-base font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} mb-2 ${theme.text}`}>{children}</h2>,
+                h3: ({ children }) => <h3 className={`text-sm font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} mb-1 ${theme.text}`}>{children}</h3>,
                 ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
                 ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
                 li: ({ children }) => <li className="text-sm">{children}</li>,

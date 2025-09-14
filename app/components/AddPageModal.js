@@ -47,18 +47,18 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className={`
-        ${theme.background2} rounded-lg shadow-xl border border-gray-200/30
+        ${theme.modal?.background || theme.background2} rounded-lg shadow-xl ${theme.border}
         w-full max-w-md mx-4
       `}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200/30">
-          <h2 className={`text-lg font-semibold font-ibm-plex-sans ${theme.text} flex items-center gap-2`}>
+        <div className={`flex items-center justify-between p-6 border-b ${theme.border}`}>
+          <h2 className={`text-lg font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} ${theme.modal?.text || theme.text} flex items-center gap-2`}>
             <Plus className={`w-4 h-4 ${theme.accent}`} />
             Add Page to {project.title}
           </h2>
           <button
             onClick={onClose}
-            className={`p-1 rounded hover:${theme.background} transition-colors`}
+            className={`p-1 rounded ${theme.hover} transition-colors`}
           >
             <X className={`w-4 h-4 ${theme.secondary}`} />
           </button>
@@ -67,7 +67,7 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className={`block text-sm font-medium ${theme.text} mb-2`}>
+            <label className={`block text-sm font-medium ${theme.font?.label || 'font-medium'} ${theme.modal?.text || theme.text} mb-2`}>
               Page Title
             </label>
             <input
@@ -78,17 +78,16 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
               placeholder="Enter page title..."
               className={`
                 w-full px-3 py-2 rounded border transition-colors
-                ${theme.input?.background || theme.background} ${theme.input?.text || theme.text} 
-                ${theme.input?.border || 'border-gray-300/30'}
-                ${theme.focusRing || 'focus:border-blue-500 focus:ring-1 focus:ring-blue-500'}
-                focus:outline-none ${theme.input?.placeholder || ''}
+                ${theme.input}
+                ${theme.focusRing}
+                focus:outline-none
               `}
               required
             />
           </div>
 
           <div>
-            <label className={`block text-sm font-medium ${theme.text} mb-2`}>
+            <label className={`block text-sm font-medium ${theme.font?.label || 'font-medium'} ${theme.modal?.text || theme.text} mb-2`}>
               Content (Optional)
             </label>
             <textarea
@@ -99,10 +98,9 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
               rows={4}
               className={`
                 w-full px-3 py-2 rounded border transition-colors resize-none
-                ${theme.input?.background || theme.background} ${theme.input?.text || theme.text} 
-                ${theme.input?.border || 'border-gray-300/30'}
-                ${theme.focusRing || 'focus:border-blue-500 focus:ring-1 focus:ring-blue-500'}
-                focus:outline-none ${theme.input?.placeholder || ''}
+                ${theme.input}
+                ${theme.focusRing}
+                focus:outline-none
               `}
             />
           </div>
@@ -113,8 +111,8 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
               type="button"
               onClick={onClose}
               className={`
-                flex-1 px-4 py-2 rounded border transition-colors
-                ${theme.button?.cancel || `${theme.secondary} border-gray-300/30 ${theme.hover?.secondary || 'hover:bg-gray-100'}`}
+                flex-1 px-4 py-2 rounded ${theme.border} transition-colors
+                ${theme.secondary} ${theme.hover}
               `}
             >
               Cancel
@@ -125,7 +123,7 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
               className={`
                 flex-1 px-4 py-2 rounded transition-colors
                 ${formData.title.trim() && !isSubmitting
-                  ? (theme.button?.primary || 'bg-gray-800 text-white hover:bg-gray-700')
+                  ? theme.button
                   : `${theme.secondary} cursor-not-allowed opacity-50`
                 }
               `}

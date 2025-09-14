@@ -63,18 +63,10 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
 
   const addTask = async () => {
     if (newTask.trim()) {
-      const task = {
-        id: Date.now(),
-        text: newTask.trim(),
-        completed: false,
-        createdAt: new Date().toISOString()
-      };
-      
-      // Optimistically update UI
-      setTasks(prev => [...prev, task]);
+      const taskText = newTask.trim();
       setNewTask('');
       
-      // Persist to database
+      // Persist to database first, then update UI with real data
       try {
         const response = await fetch(`/api/projects/${tasksCard.projectId}/task-lists/${tasksCard.id}/tasks`, {
           method: 'POST',
@@ -82,31 +74,34 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            text: task.text,
+            text: taskText,
             orderIndex: tasks.length
           }),
         });
         
-        if (!response.ok) {
+        if (response.ok) {
+          const newTask = await response.json();
+          setTasks(prev => [...prev, newTask]);
+        } else {
           console.error('Failed to save task to database');
-          // Revert optimistic update on failure
-          setTasks(prev => prev.filter(t => t.id !== task.id));
+          // Restore the input text on failure
+          setNewTask(taskText);
         }
       } catch (error) {
         console.error('Error saving task:', error);
-        // Revert optimistic update on failure
-        setTasks(prev => prev.filter(t => t.id !== task.id));
+        // Restore the input text on failure
+        setNewTask(taskText);
       }
     }
   };
 
   const toggleTask = async (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find(t => t.id == taskId); // Use == to handle string/number conversion
     if (!task) return;
     
     // Optimistically update UI
     setTasks(prev => prev.map(t => 
-      t.id === taskId ? { ...t, completed: !t.completed } : t
+      t.id == taskId ? { ...t, completed: !t.completed } : t
     ));
     
     // Persist to database
@@ -121,28 +116,34 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
         }),
       });
       
-      if (!response.ok) {
+      if (response.ok) {
+        const updatedTask = await response.json();
+        // Update with the response data to ensure consistency
+        setTasks(prev => prev.map(t => 
+          t.id == taskId ? updatedTask : t
+        ));
+      } else {
         console.error('Failed to update task in database');
         // Revert optimistic update on failure
         setTasks(prev => prev.map(t => 
-          t.id === taskId ? { ...t, completed: task.completed } : t
+          t.id == taskId ? { ...t, completed: task.completed } : t
         ));
       }
     } catch (error) {
       console.error('Error updating task:', error);
       // Revert optimistic update on failure
       setTasks(prev => prev.map(t => 
-        t.id === taskId ? { ...t, completed: task.completed } : t
+        t.id == taskId ? { ...t, completed: task.completed } : t
       ));
     }
   };
 
   const deleteTask = async (taskId) => {
-    const taskToDelete = tasks.find(t => t.id === taskId);
+    const taskToDelete = tasks.find(t => t.id == taskId); // Use == to handle string/number conversion
     if (!taskToDelete) return;
     
     // Optimistically update UI
-    setTasks(prev => prev.filter(task => task.id !== taskId));
+    setTasks(prev => prev.filter(task => task.id != taskId));
     
     // Persist to database
     try {
@@ -184,7 +185,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
         ${theme.background2}
         border-2 ${selected 
           ? 'border-blue-500 ring-2 ring-blue-300/50' 
-          : 'border-blue-300/50'
+          : theme.border
         }
       `}>
         {/* Target handles positioned on the card boundaries */}
@@ -251,7 +252,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
 
         {/* Tasks Header */}
         <div className="flex justify-between items-start mb-4 cursor-move">
-          <h3 className={`text-lg font-semibold font-ibm-plex-sans line-clamp-1 ${theme.text} flex items-center gap-2`}>
+          <h3 className={`text-lg font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} line-clamp-1 ${theme.text} flex items-center gap-2`}>
             <ClipboardList className={`w-4 h-4 ${theme.accent}`} />
             Tasks
           </h3>
@@ -272,7 +273,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
               onChange={(e) => setNewTask(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Add a new task..."
-              className={`flex-1 px-3 py-2 rounded text-sm border ${theme.input} ${theme.border} focus:outline-none focus:ring-2 ${theme.focusRing} focus:border-transparent`}
+              className={`flex-1 px-3 py-2 rounded text-sm border ${theme.input} focus:outline-none focus:ring-2 ${theme.focusRing} focus:border-transparent`}
             />
             <button
               onClick={addTask}
@@ -301,7 +302,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
                   key={task.id}
                   className={`flex items-center gap-3 p-2 rounded border transition-all ${
                     task.completed 
-                      ? `${theme.background} ${theme.border} opacity-75` 
+                      ? `${theme.background} ${theme.border} opacity-100` 
                       : `${theme.background} ${theme.border} ${theme.hover}`
                   }`}
                 >
@@ -309,7 +310,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
                     onClick={() => toggleTask(task.id)}
                     className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                       task.completed
-                        ? `${theme.statusIndicator} ${theme.statusIndicator} text-white`
+                        ? `${theme.statusIndicator} text-white`
                         : `${theme.border} ${theme.hover}`
                     }`}
                   >
