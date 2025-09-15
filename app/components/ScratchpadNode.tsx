@@ -180,11 +180,6 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
                 <span className={`text-xs ${theme.secondary}`}>Saving...</span>
               </div>
             )}
-            {lastSaved && !isSaving && (
-              <span className={`text-xs ${theme.secondary}`}>
-                Saved {lastSaved.toLocaleTimeString()}
-              </span>
-            )}
             <button
               onClick={() => onDelete(scratchpadCard.id)}
               className={`text-sm ${theme.secondary} hover:text-red-500 transition-colors`}
@@ -212,10 +207,7 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
           />
           
           {/* Character Counter */}
-          <div className={`mt-2 flex justify-between items-center text-xs`}>
-            <span className={theme.secondary}>
-              {text.split('\n').length} lines
-            </span>
+          <div className={`mt-2 flex justify-end items-center text-xs`}>
             <span className={`
               ${remainingChars < 50 ? 'text-yellow-600' : theme.secondary}
               ${remainingChars === 0 ? 'text-red-600 font-medium' : ''}

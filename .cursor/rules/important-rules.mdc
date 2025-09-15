@@ -29,7 +29,7 @@ description: Critical coding standards, conventions, and implementation patterns
 React/Next.js → third-party libraries → internal components → types → relative imports
 
 ## Theme System
-- Access theme colors through theme store for light/dark mode support
+- Access theme colors through theme store for light/dark mode support, check the `colors.ts` files for reference
 - Use `isDarkMode ? colors.dark : colors.light` pattern
 - Support both light and dark themes consistently
 

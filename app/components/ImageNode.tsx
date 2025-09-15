@@ -3,7 +3,7 @@ import React from 'react';
 
 import { memo, useState, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
-import { Image as ImageIcon, X, Upload, ExternalLink } from 'lucide-react';
+import { Image as ImageIcon, X, Upload, ExternalLink, Edit3 } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
 const ImageNode = memo(({ data, isConnectable, selected }: any) => {
@@ -237,10 +237,11 @@ const ImageNode = memo(({ data, isConnectable, selected }: any) => {
             )}
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className={`text-xs px-2 py-1 rounded ${theme.button} hover:opacity-80 transition-opacity`}
+              className={`text-sm ${theme.secondary} hover:${theme.accent} transition-colors`}
               disabled={isLoading}
+              title={isEditing ? 'Cancel editing' : 'Edit image'}
             >
-              {isEditing ? 'Cancel' : 'Edit'}
+              <Edit3 className="w-3 h-3" />
             </button>
             <button
               onClick={() => onDelete(imageCard.id)}

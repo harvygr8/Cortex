@@ -309,18 +309,18 @@ const TasksNode = memo(({ data, isConnectable, selected }: any) => {
               {tasks.map((task: any) => (
                 <div
                   key={task.id}
-                  className={`flex items-center gap-3 p-2 rounded border transition-all ${
+                  className={`flex items-center gap-3 p-2 rounded transition-all ${
                     task.completed 
-                      ? `${theme.background} ${theme.border} opacity-100` 
-                      : `${theme.background} ${theme.border} ${theme.hover}`
+                      ? `${theme.background} opacity-100` 
+                      : `${theme.background} ${theme.hover}`
                   }`}
                 >
                   <button
                     onClick={() => toggleTask(task.id)}
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                    className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
                       task.completed
                         ? `${theme.statusIndicator} text-white`
-                        : `${theme.border} ${theme.hover}`
+                        : `${theme.border} ${theme.hover} border-2`
                     }`}
                   >
                     {task.completed && <Check className="w-3 h-3" />}
@@ -350,7 +350,7 @@ const TasksNode = memo(({ data, isConnectable, selected }: any) => {
 
         {/* Tasks Summary */}
         {tasks.length > 0 && (
-          <div className={`mt-3 pt-3 border-t ${theme.border}`}>
+          <div className="mt-3 pt-3">
             <div className="flex justify-between items-center text-xs">
               <span className={theme.secondary}>
                 {tasks.filter((t: any) => t.completed).length} of {tasks.length} completed

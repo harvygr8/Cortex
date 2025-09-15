@@ -127,14 +127,20 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
         </div>
 
         {/* Query Section */}
-        <div className={`mb-4 p-3 rounded ${theme.background} border ${theme.border}`}>
-          <p className={`text-sm ${theme.text} italic leading-relaxed`}>
+        <div className="mb-4 mt-2">
+          <h4 className={`text-xs font-semibold ${theme.secondary} mb-2 uppercase tracking-wide underline`}>
+            Question
+          </h4>
+          <p className={`text-sm ${theme.text} leading-relaxed`}>
             {chatCard.query}
           </p>
         </div>
 
         {/* Response Section */}
         <div className="flex-1 overflow-y-auto">
+          <h4 className={`text-xs font-semibold ${theme.secondary} mb-2 uppercase tracking-wide underline`}>
+            Answer
+          </h4>
           <div className={`text-sm ${theme.text} leading-relaxed prose prose-sm max-w-none ${isDarkMode ? 'prose-invert' : ''}`}>
             <ReactMarkdown 
               remarkPlugins={[remarkGfm]}
@@ -174,7 +180,7 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
           
           {/* Sources Section */}
           {chatCard.sources && chatCard.sources.length > 0 && (
-            <div className={`mt-3 pt-3 border-t ${theme.border}`}>
+            <div className="mt-3 pt-3">
               <div className="flex flex-wrap gap-1.5">
                 {chatCard.sources.map((source: any, idx: number) => (
                   <SourceBadge key={idx} source={source} />
