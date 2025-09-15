@@ -212,6 +212,7 @@ class ProjectStore {
   }
 
   async addPage(projectId: string, title: string, content: string = ''): Promise<any> {
+    await this.initialize();
     const maxOrder = await this.db!.get(
       'SELECT MAX(order_index) as maxOrder FROM pages WHERE project_id = ?',
       projectId
@@ -227,6 +228,7 @@ class ProjectStore {
   }
 
   async getProjectPages(projectId: string): Promise<any[]> {
+    await this.initialize();
     return this.db!.all(
       'SELECT * FROM pages WHERE project_id = ? ORDER BY order_index',
       projectId
@@ -234,6 +236,7 @@ class ProjectStore {
   }
 
   async getProject(id: string): Promise<any> {
+    await this.initialize();
     const project = await this.db!.get('SELECT * FROM projects WHERE id = ?', id);
     if (project) {
       project.pages = await this.getProjectPages(id);
@@ -252,6 +255,7 @@ class ProjectStore {
   }
 
   async getChapter(id: string): Promise<any> {
+    await this.initialize();
     const chapter = await this.db!.get('SELECT * FROM chapters WHERE id = ?', id);
     if (chapter) {
       chapter.pages = await this.getChapterPages(id);
@@ -273,6 +277,7 @@ class ProjectStore {
   }
 
   async updatePage(id: string, title: string, content: string): Promise<any> {
+    await this.initialize();
     await this.db!.run(
       'UPDATE pages SET title = ?, content = ? WHERE id = ?',
       [title, content, id]
@@ -281,10 +286,12 @@ class ProjectStore {
   }
 
   async deletePage(id: string): Promise<void> {
+    await this.initialize();
     await this.db!.run('DELETE FROM pages WHERE id = ?', id);
   }
 
   async reorderPages(projectId: string, pageOrders: PageOrder[]): Promise<void> {
+    await this.initialize();
     const updates = pageOrders.map(({ id, order_index }) =>
       this.db!.run(
         'UPDATE pages SET order_index = ? WHERE id = ? AND project_id = ?',
@@ -296,6 +303,7 @@ class ProjectStore {
 
 
   async updateProject(id: string, title: string, description: string): Promise<any> {
+    await this.initialize();
     await this.db!.run(
       'UPDATE projects SET title = ?, description = ? WHERE id = ?',
       [title, description, id]

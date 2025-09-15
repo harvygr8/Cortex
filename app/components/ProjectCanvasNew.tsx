@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ReactFlow, { 
-  Background, 
   Controls, 
   useNodesState, 
   useEdgesState, 
@@ -15,7 +14,6 @@ import ReactFlow, {
   EdgeChange,
   Connection,
   SelectionMode,
-  BackgroundVariant,
   NodeDragHandler,
   NodeMouseHandler,
   OnSelectionChangeParams,
@@ -2876,12 +2874,6 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
         selectionMode={SelectionMode.Partial}
         selectionKeyCode={null}
       >
-        <Background 
-          variant={BackgroundVariant.Dots} 
-          gap={25} 
-          size={2}
-          color={isDarkMode ? '#374151' : '#9ca3af'}
-        />
         <Controls />
       </ReactFlow>
 

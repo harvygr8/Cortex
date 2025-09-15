@@ -1,0 +1,98 @@
+---
+alwaysApply: true
+description: Critical coding standards, conventions, and implementation patterns for Cortex
+---
+
+# Important Rules for Cortex Development
+
+## Type System (CRITICAL)
+- **All types must be centralized in `types/index.ts`** - never create interfaces in component files
+- Import types with relative paths from components, absolute paths from API routes
+- Use strict TypeScript mode, fix all linting errors, never use `any` type
+
+## Naming Conventions
+- **Files:** PascalCase (components), camelCase (utilities), kebab-case (routes)
+- **Variables/Functions:** camelCase (`projectId`, `getUserData`)
+- **Constants:** UPPER_SNAKE_CASE (`API_BASE_URL`, `DEFAULT_THEME`)
+- **Database fields:** snake_case (`position_x`, `task_list_id`, `created_at`)
+- **Event handlers:** `handle` prefix (`handleClick`, `handleSubmit`)
+- **Booleans:** `is/has/can` prefix (`isLoading`, `hasPermission`, `canEdit`)
+
+## Code Quality
+- Use descriptive names, avoid abbreviations (`userData` not `usrData`)
+- Functions are verbs, variables are nouns
+- Prefer `const` over `let`, never use `var`
+- Use template literals for string interpolation
+- Keep functions small and single-purpose, use early returns
+
+## Import Organization
+React/Next.js → third-party libraries → internal components → types → relative imports
+
+## Theme System
+- Access theme colors through theme store for light/dark mode support
+- Use `isDarkMode ? colors.dark : colors.light` pattern
+- Support both light and dark themes consistently
+
+## Database Operations (CRITICAL)
+- **ALWAYS** initialize database first: `await projectStore.initialize()`
+- SQLite booleans are integers (0/1) - convert with `Boolean(value)`
+- Follow foreign key relationships when deleting (children before parents)
+- Use transactions for multi-step operations
+- Always handle foreign key constraints in deletion order
+
+## API Route Patterns
+- Structure: initialize DB → validate params → try-catch main logic
+- Use proper HTTP status codes (400 client errors, 500 server errors)
+- Return consistent JSON responses with error/success patterns
+- Log detailed errors for debugging, return user-friendly messages
+- Always call `projectStore.initialize()` before database operations
+
+## Error Handling Strategy
+- Try-catch blocks around all async operations
+- API routes: log detailed errors, return user-friendly messages
+- Components: show toast notifications for user-facing errors
+- Database: always initialize before operations
+- Never let AI/vector failures prevent core CRUD operations
+
+## React Component Architecture
+- Interactive components need `'use client'` directive at top
+- Remove unused imports to keep bundle size optimized
+- Wrap expensive components with `React.memo`
+- Clean up event listeners in `useEffect` cleanup functions
+- Use proper dependency arrays in hooks
+
+## Canvas & React Flow
+- Canvas nodes use proper TypeScript typing with node data interfaces
+- Draggable nodes: Projects, Pages, Chat conversations, Task lists, Containers, Images, Scratchpads
+- Background component is optional - remove entirely for clean canvas (no dots/patterns)
+- Import only needed components from reactflow package
+- Controls component provides zoom/pan functionality
+
+## AI & Vector Search (Non-Critical)
+- AI features like 'Ask a question/Chat' are **non-critical** - log errors but never break core app functionality
+- Search and AI should degrade gracefully when unavailable
+- Always initialize systems before processing operations
+- After content changes, regenerate AI vectors for search functionality
+- Use hybrid search combining semantic similarity with keyword matching
+- Vector operations should be async and handle failures gracefully
+
+## Project Architecture
+- Cortex: knowledge management platform with visual canvas interface
+- Node types: Projects, Pages (markdown), Q/A (AI), Tasks, Containers, Images, Scratchpads
+- Tech stack: Next.js, React, TypeScript, SQLite, Ollama (local AI)
+- Key files: `types/index.ts` • `lib/projectStore.ts` • `app/components/ProjectCanvasNew.tsx` • `lib/contextAgent.ts`
+
+## Performance & Memory Management
+- Use `React.memo` for expensive components
+- Implement proper loading states
+- Use debounced operations for frequent updates
+- Clean up event listeners in useEffect cleanup
+- Avoid memory leaks in long-running operations
+- Clear timeouts and intervals
+
+## Security & Data Validation
+- Validate all user inputs
+- Sanitize data before database operations
+- Use proper TypeScript types for validation
+- Handle edge cases and malformed data
+- Use parameterized queries to prevent SQL injection
