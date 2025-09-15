@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import projectStore from '../../../../lib/projectStore';
 import vectorStore from '../../../../lib/vectorStore';
+import { rmdir, unlink, readdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 export async function GET(request, { params }) {
   try {
@@ -27,6 +30,35 @@ export async function GET(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await projectStore.initialize();
+    
+    // Clean up project images directory
+    const projectImagesDir = join(process.cwd(), 'public', 'images', params.projectId);
+    try {
+      if (existsSync(projectImagesDir)) {
+        // Read all files in the directory
+        const files = await readdir(projectImagesDir);
+        
+        // Delete all image files
+        for (const file of files) {
+          const filepath = join(projectImagesDir, file);
+          try {
+            await unlink(filepath);
+            console.log(`[Project Cleanup] Deleted image file: ${filepath}`);
+          } catch (fileError) {
+            console.warn(`[Project Cleanup] Could not delete file ${filepath}:`, fileError);
+          }
+        }
+        
+        // Remove the empty directory
+        await rmdir(projectImagesDir);
+        console.log(`[Project Cleanup] Removed project images directory: ${projectImagesDir}`);
+      }
+    } catch (dirError) {
+      console.warn(`[Project Cleanup] Could not clean up images directory for project ${params.projectId}:`, dirError);
+      // Continue with project deletion even if image cleanup fails
+    }
+    
+    // Delete project from database (this will cascade delete related data)
     await projectStore.deleteProject(params.projectId);
     
     // Clean up vector store
@@ -36,7 +68,10 @@ export async function DELETE(request, { params }) {
       console.error('Vector store cleanup error (non-fatal):', vectorError);
     }
     
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: 'Project and all associated files deleted successfully'
+    });
   } catch (error) {
     console.error('Error deleting project:', error);
     return NextResponse.json(

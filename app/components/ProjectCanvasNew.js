@@ -21,6 +21,9 @@ import PageModal from './PageModal';
 import ProjectNode from './ProjectNode';
 import ChatNode from './ChatNode';
 import TasksNode from './TasksNode';
+import ScratchpadNode from './ScratchpadNode';
+import ImageNode from './ImageNode';
+import ContainerNode from './ContainerNode';
 
 // Default card and grid settings
 const DEFAULT_CARD_WIDTH = 420;
@@ -34,6 +37,9 @@ const nodeTypes = {
   projectNode: ProjectNode,
   chatNode: ChatNode,
   tasksNode: TasksNode,
+  scratchpadNode: ScratchpadNode,
+  imageNode: ImageNode,
+  containerNode: ContainerNode,
 };
 
 // React Flow wrapper component
@@ -54,10 +60,16 @@ function ProjectCanvasFlow({ projects }) {
   const [contextMenu, setContextMenu] = useState(null);
   const [chatContextMenu, setChatContextMenu] = useState(null);
   const [tasksContextMenu, setTasksContextMenu] = useState(null);
+  const [scratchpadContextMenu, setScratchpadContextMenu] = useState(null);
+  const [imageContextMenu, setImageContextMenu] = useState(null);
+  const [paneContextMenu, setPaneContextMenu] = useState(null);
   const [chatModal, setChatModal] = useState(null);
   const [addPageModal, setAddPageModal] = useState(null);
   const [pageModal, setPageModal] = useState(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [containers, setContainers] = useState([]);
+  const [selectedContainer, setSelectedContainer] = useState(null);
+  const [containerNodeMap, setContainerNodeMap] = useState(new Map());
   
   // Track positions for debounced saving
   const savePositionsTimeoutRef = useRef(null);
@@ -89,13 +101,29 @@ function ProjectCanvasFlow({ projects }) {
             body: JSON.stringify({ positionX: x, positionY: y }),
           }).catch(error => console.error(`Error saving chat position for ${node.id}:`, error))
         );
-      } else if (node.type === 'tasksNode' && node.data.tasksCard) {
+        } else if (node.type === 'tasksNode' && node.data.tasksCard) {
         savePromises.push(
           fetch(`/api/projects/${node.data.tasksCard.projectId}/task-lists/${node.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ positionX: x, positionY: y }),
           }).catch(error => console.error(`Error saving task position for ${node.id}:`, error))
+        );
+      } else if (node.type === 'scratchpadNode' && node.data.scratchpadCard) {
+        savePromises.push(
+          fetch(`/api/projects/${node.data.scratchpadCard.projectId}/scratchpads/${node.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ positionX: x, positionY: y }),
+          }).catch(error => console.error(`Error saving scratchpad position for ${node.id}:`, error))
+        );
+      } else if (node.type === 'imageNode' && node.data.imageCard) {
+        savePromises.push(
+          fetch(`/api/projects/${node.data.imageCard.projectId}/images/${node.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ positionX: x, positionY: y }),
+          }).catch(error => console.error(`Error saving image position for ${node.id}:`, error))
         );
       }
     }
@@ -169,6 +197,23 @@ function ProjectCanvasFlow({ projects }) {
     setContextMenu(null);
   }, []);
 
+  const handleClosePaneContextMenu = useCallback(() => {
+    setPaneContextMenu(null);
+  }, []);
+
+  // Pane context menu handler (right-click on empty canvas)
+  const handlePaneContextMenu = useCallback((event) => {
+    event.preventDefault();
+    setPaneContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      position: {
+        x: event.clientX,
+        y: event.clientY
+      }
+    });
+  }, []);
+
   // Chat context menu handlers
   const handleChatContextMenu = useCallback((e, chatCard) => {
     console.log('handleChatContextMenu called', { e, chatCard });
@@ -201,6 +246,40 @@ function ProjectCanvasFlow({ projects }) {
 
   const handleCloseTasksContextMenu = useCallback(() => {
     setTasksContextMenu(null);
+  }, []);
+
+  // Scratchpad context menu handlers
+  const handleScratchpadContextMenu = useCallback((e, scratchpadCard) => {
+    console.log('handleScratchpadContextMenu called', { e, scratchpadCard });
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setScratchpadContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      scratchpadCard: scratchpadCard
+    });
+  }, []);
+
+  const handleCloseScratchpadContextMenu = useCallback(() => {
+    setScratchpadContextMenu(null);
+  }, []);
+
+  // Image context menu handlers
+  const handleImageContextMenu = useCallback((e, imageCard) => {
+    console.log('handleImageContextMenu called', { e, imageCard });
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setImageContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      imageCard: imageCard
+    });
+  }, []);
+
+  const handleCloseImageContextMenu = useCallback(() => {
+    setImageContextMenu(null);
   }, []);
 
   const handleChatWithProject = useCallback((project) => {
@@ -449,7 +528,11 @@ function ProjectCanvasFlow({ projects }) {
       return filteredEdges;
     });
     
-    toast.success(`${nodeType === 'chatNode' ? 'Q/A Node' : 'Task Node'} detached from project`);
+    const nodeTypeLabel = nodeType === 'chatNode' ? 'Q/A Node' : 
+                         nodeType === 'tasksNode' ? 'Task Node' :
+                         nodeType === 'scratchpadNode' ? 'Scratchpad Node' :
+                         nodeType === 'imageNode' ? 'Image Node' : 'Node';
+    toast.success(`${nodeTypeLabel} detached from project`);
   }, [setEdges]);
 
   // Delete chat node
@@ -504,6 +587,58 @@ function ProjectCanvasFlow({ projects }) {
     }
   }, [setNodes, setEdges]);
 
+  // Delete scratchpad node
+  const deleteScratchpadNode = useCallback(async (scratchpadNodeId) => {
+    // Get current nodes to find project info
+    let projectId = null;
+    setNodes(prev => {
+      const scratchpadNode = prev.find(node => node.id === scratchpadNodeId);
+      projectId = scratchpadNode?.data?.scratchpadCard?.projectId;
+      return prev.filter(node => node.id !== scratchpadNodeId);
+    });
+    
+    setEdges(prev => prev.filter(edge => 
+      edge.source !== scratchpadNodeId && edge.target !== scratchpadNodeId
+    ));
+    
+    // Delete from database
+    if (projectId) {
+      try {
+        await fetch(`/api/projects/${projectId}/scratchpads/${scratchpadNodeId}`, {
+          method: 'DELETE',
+        });
+      } catch (error) {
+        console.error('Error deleting scratchpad from database:', error);
+      }
+    }
+  }, [setNodes, setEdges]);
+
+  // Delete image node
+  const deleteImageNode = useCallback(async (imageNodeId) => {
+    // Get current nodes to find project info
+    let projectId = null;
+    setNodes(prev => {
+      const imageNode = prev.find(node => node.id === imageNodeId);
+      projectId = imageNode?.data?.imageCard?.projectId;
+      return prev.filter(node => node.id !== imageNodeId);
+    });
+    
+    setEdges(prev => prev.filter(edge => 
+      edge.source !== imageNodeId && edge.target !== imageNodeId
+    ));
+    
+    // Delete from database
+    if (projectId) {
+      try {
+        await fetch(`/api/projects/${projectId}/images/${imageNodeId}`, {
+          method: 'DELETE',
+        });
+      } catch (error) {
+        console.error('Error deleting image from database:', error);
+      }
+    }
+  }, [setNodes, setEdges]);
+
   // Fetch pages for all projects - only once on mount or when projects change
   useEffect(() => {
     const fetchAllProjectPages = async () => {
@@ -547,6 +682,9 @@ function ProjectCanvasFlow({ projects }) {
       console.log('[ProjectCanvas] Loading persisted data for', projects.length, 'projects');
       const chatNodes = [];
       const taskNodes = [];
+      const scratchpadNodes = [];
+      const imageNodes = [];
+      const containerNodes = [];
       const projectNodes = [];
       const edges = [];
       
@@ -727,6 +865,223 @@ function ProjectCanvasFlow({ projects }) {
               edges.push(edge);
             });
           }
+          
+          // Load scratchpads
+          const scratchpadResponse = await fetch(`/api/projects/${project.id}/scratchpads`);
+          if (scratchpadResponse.ok) {
+            const scratchpads = await scratchpadResponse.json();
+            
+            scratchpads.forEach(scratchpad => {
+              const scratchpadNodeId = scratchpad.id;
+              const scratchpadNode = {
+                id: scratchpadNodeId,
+                type: 'scratchpadNode',
+                position: { x: Number(scratchpad.position_x) || 0, y: Number(scratchpad.position_y) || 0 },
+                data: {
+                  scratchpadCard: {
+                    id: scratchpad.id,
+                    text: scratchpad.text || '',
+                    projectId: project.id
+                  },
+                  onDelete: deleteScratchpadNode,
+                  onContextMenu: handleScratchpadContextMenu
+                },
+                style: { 
+                  width: DEFAULT_CARD_WIDTH, 
+                  height: DEFAULT_CARD_HEIGHT 
+                }
+              };
+              scratchpadNodes.push(scratchpadNode);
+              
+              // Create edge to project using stored handle information
+              const sourceNodeId = `project-${project.id}`;
+              
+              // Use stored handles if available, otherwise fall back to smart calculation
+              let sourceHandle = scratchpad.source_handle;
+              let targetHandle = scratchpad.target_handle;
+              
+              // If no handles stored, calculate them (fallback for old data)
+              if (!sourceHandle || !targetHandle) {
+                const projectNode = projects.find(p => p.id === project.id);
+                const projectIndex = projects.findIndex(p => p.id === project.id);
+                const row = Math.floor(projectIndex / GRID_COLUMNS);
+                const col = projectIndex % GRID_COLUMNS;
+                const projectPos = {
+                  x: col * (DEFAULT_CARD_WIDTH + GRID_H_GAP),
+                  y: row * (DEFAULT_CARD_HEIGHT + GRID_V_GAP)
+                };
+                
+                const scratchpadPos = { x: Number(scratchpad.position_x) || 0, y: Number(scratchpad.position_y) || 0 };
+                const deltaX = scratchpadPos.x - projectPos.x;
+                const deltaY = scratchpadPos.y - projectPos.y;
+                
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                  if (deltaX > 0) {
+                    sourceHandle = 'project-output-right';
+                    targetHandle = 'scratchpad-input-left';
+                  } else {
+                    sourceHandle = 'project-output-left';
+                    targetHandle = 'scratchpad-input-right';
+                  }
+                } else {
+                  if (deltaY > 0) {
+                    sourceHandle = 'project-output-bottom';
+                    targetHandle = 'scratchpad-input-top';
+                  } else {
+                    sourceHandle = 'project-output-top';
+                    targetHandle = 'scratchpad-input-bottom';
+                  }
+                }
+              }
+              
+              const edge = {
+                id: `edge-${sourceNodeId}-${scratchpadNodeId}`,
+                source: sourceNodeId,
+                target: scratchpadNodeId,
+                sourceHandle,
+                targetHandle,
+                type: 'smoothstep',
+                style: { 
+                  stroke: isDarkMode ? '#3b82f6' : '#2563eb',
+                  strokeWidth: 2,
+                  strokeDasharray: '5,5'
+                },
+                animated: true
+              };
+              edges.push(edge);
+            });
+          }
+
+          // Load images
+          const imageResponse = await fetch(`/api/projects/${project.id}/images`);
+          if (imageResponse.ok) {
+            const images = await imageResponse.json();
+            
+            images.forEach(image => {
+              const imageNodeId = image.id;
+              const imageNode = {
+                id: imageNodeId,
+                type: 'imageNode',
+                position: { x: Number(image.position_x) || 0, y: Number(image.position_y) || 0 },
+                data: {
+                  imageCard: {
+                    id: image.id,
+                    imageUrl: image.image_url || '',
+                    imageAlt: image.image_alt || '',
+                    projectId: project.id
+                  },
+                  onDelete: deleteImageNode,
+                  onContextMenu: handleImageContextMenu
+                },
+                style: { 
+                  width: DEFAULT_CARD_WIDTH, 
+                  height: DEFAULT_CARD_HEIGHT 
+                }
+              };
+              imageNodes.push(imageNode);
+              
+              // Create edge to project using stored handle information
+              const sourceNodeId = `project-${project.id}`;
+              
+              // Use stored handles if available, otherwise fall back to smart calculation
+              let sourceHandle = image.source_handle;
+              let targetHandle = image.target_handle;
+              
+              // If no handles stored, calculate them (fallback for old data)
+              if (!sourceHandle || !targetHandle) {
+                const projectNode = projects.find(p => p.id === project.id);
+                const projectIndex = projects.findIndex(p => p.id === project.id);
+                const row = Math.floor(projectIndex / GRID_COLUMNS);
+                const col = projectIndex % GRID_COLUMNS;
+                const projectPos = {
+                  x: col * (DEFAULT_CARD_WIDTH + GRID_H_GAP),
+                  y: row * (DEFAULT_CARD_HEIGHT + GRID_V_GAP)
+                };
+                
+                const imagePos = { x: Number(image.position_x) || 0, y: Number(image.position_y) || 0 };
+                const deltaX = imagePos.x - projectPos.x;
+                const deltaY = imagePos.y - projectPos.y;
+                
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                  if (deltaX > 0) {
+                    sourceHandle = 'project-output-right';
+                    targetHandle = 'image-input-left';
+                  } else {
+                    sourceHandle = 'project-output-left';
+                    targetHandle = 'image-input-right';
+                  }
+                } else {
+                  if (deltaY > 0) {
+                    sourceHandle = 'project-output-bottom';
+                    targetHandle = 'image-input-top';
+                  } else {
+                    sourceHandle = 'project-output-top';
+                    targetHandle = 'image-input-bottom';
+                  }
+                }
+              }
+              
+              const edge = {
+                id: `edge-${sourceNodeId}-${imageNodeId}`,
+                source: sourceNodeId,
+                target: imageNodeId,
+                sourceHandle,
+                targetHandle,
+                type: 'smoothstep',
+                style: { 
+                  stroke: isDarkMode ? '#3b82f6' : '#2563eb',
+                  strokeWidth: 2,
+                  strokeDasharray: '5,5'
+                },
+                animated: true
+              };
+              edges.push(edge);
+            });
+          }
+
+          // Load containers for this project
+          const containerResponse = await fetch(`/api/projects/${project.id}/containers`);
+          if (containerResponse.ok) {
+            const containers = await containerResponse.json();
+            
+            containers.forEach(container => {
+              const containerNode = {
+                id: `container-${container.id}`,
+                type: 'containerNode',
+                position: { 
+                  x: Number(container.position_x) || 0, 
+                  y: Number(container.position_y) || 0 
+                },
+                data: {
+                  containerCard: {
+                    id: container.id,
+                    label: container.label || 'Container',
+                    color: container.color || '#3b82f6',
+                    projectId: project.id
+                  },
+                  label: container.label || 'Container',
+                  color: container.color || '#3b82f6',
+                  size: { 
+                    width: Number(container.width) || 300, 
+                    height: Number(container.height) || 200 
+                  },
+                  onUpdateLabel: updateContainerLabel,
+                  onUpdateColor: updateContainerColor,
+                  onStartResize: startContainerResize,
+                  onEndResize: endContainerResize,
+                  onDelete: deleteContainer
+                },
+                style: { 
+                  width: Number(container.width) || 300, 
+                  height: Number(container.height) || 200,
+                  zIndex: Number(container.z_index) || -1
+                },
+                zIndex: Number(container.z_index) || -1
+              };
+              
+              containerNodes.push(containerNode);
+            });
+          }
         } catch (error) {
           console.error(`Error loading persisted data for project ${project.id}:`, error);
         }
@@ -771,7 +1126,8 @@ function ProjectCanvasFlow({ projects }) {
       });
       
       // Add all nodes to the canvas (replace all existing nodes to prevent duplicates)
-      setNodes([...projectNodes, ...chatNodes, ...taskNodes]);
+      // Containers first (behind other nodes), then regular nodes
+      setNodes([...containerNodes, ...projectNodes, ...chatNodes, ...taskNodes, ...scratchpadNodes, ...imageNodes]);
       
       // Replace all edges to prevent duplicates
       setEdges(edges);
@@ -802,6 +1158,24 @@ function ProjectCanvasFlow({ projects }) {
               onContextMenu: handleTasksContextMenu
             }
           };
+        } else if (node.type === 'scratchpadNode') {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              onDelete: deleteScratchpadNode,
+              onContextMenu: handleScratchpadContextMenu
+            }
+          };
+        } else if (node.type === 'imageNode') {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              onDelete: deleteImageNode,
+              onContextMenu: handleImageContextMenu
+            }
+          };
         } else if (node.type === 'projectNode') {
           return {
             ...node,
@@ -815,7 +1189,7 @@ function ProjectCanvasFlow({ projects }) {
         return node;
       })
     );
-  }, [handleContextMenu, handleChatContextMenu, handleTasksContextMenu, deleteChatNode, deleteTaskNode, handlePageClick]);
+  }, [handleContextMenu, handleChatContextMenu, handleTasksContextMenu, handleScratchpadContextMenu, handleImageContextMenu, deleteChatNode, deleteTaskNode, deleteScratchpadNode, deleteImageNode, handlePageClick]);
 
   // Update lastNodesRef when nodes are loaded/updated (but not during drags)
   useEffect(() => {
@@ -1230,6 +1604,623 @@ function ProjectCanvasFlow({ projects }) {
     setEdges(prev => [...prev, newEdge]);
   }, [isDarkMode, handleTasksContextMenu, setNodes, setEdges]);
 
+  // Create scratchpad node
+  const createScratchpadNode = useCallback(async (sourceProjectId) => {
+    const sourceNodeId = `project-${sourceProjectId}`;
+    
+    // Get current nodes to find empty position
+    const getCurrentNodes = () => {
+      let currentNodes = [];
+      setNodes(prev => {
+        currentNodes = prev;
+        return prev;
+      });
+      return currentNodes;
+    };
+    
+    const currentNodes = getCurrentNodes();
+    const sourceNode = currentNodes.find(n => n.id === sourceNodeId);
+    
+    // Use the same dynamic positioning logic as other nodes
+    const emptyPosition = (() => {
+      if (!sourceNode) return { x: 500, y: 0 };
+      
+      const offset = 500;
+      const directions = [
+        { x: offset, y: 0 },      // Right
+        { x: -offset, y: 0 },     // Left  
+        { x: 0, y: offset },      // Below
+        { x: 0, y: -offset },     // Above
+        { x: offset, y: offset }, // Bottom-right
+        { x: -offset, y: offset }, // Bottom-left
+        { x: offset, y: -offset }, // Top-right
+        { x: -offset, y: -offset } // Top-left
+      ];
+      
+      // Try each direction
+      for (const direction of directions) {
+        const candidatePos = { 
+          x: sourceNode.position.x + direction.x, 
+          y: sourceNode.position.y + direction.y
+        };
+        
+        // Check for overlaps using proper rectangle collision detection
+        const hasOverlap = currentNodes.some(node => {
+          const nodeRight = node.position.x + DEFAULT_CARD_WIDTH;
+          const nodeBottom = node.position.y + DEFAULT_CARD_HEIGHT;
+          const candidateRight = candidatePos.x + DEFAULT_CARD_WIDTH;
+          const candidateBottom = candidatePos.y + DEFAULT_CARD_HEIGHT;
+          
+          return !(
+            candidatePos.x >= nodeRight ||
+            candidateRight <= node.position.x ||
+            candidatePos.y >= nodeBottom ||
+            candidateBottom <= node.position.y
+          );
+        });
+        
+        if (!hasOverlap) {
+          return candidatePos;
+        }
+      }
+      
+      // Fallback: spiral outward from source
+      const spiralAttempts = 8;
+      for (let i = 1; i <= spiralAttempts; i++) {
+        const expandedOffset = offset + (i * 100);
+        for (const direction of directions) {
+          const candidatePos = { 
+            x: sourceNode.position.x + (direction.x !== 0 ? Math.sign(direction.x) * expandedOffset : 0), 
+            y: sourceNode.position.y + (direction.y !== 0 ? Math.sign(direction.y) * expandedOffset : 0)
+          };
+          
+          const hasOverlap = currentNodes.some(node => {
+            const nodeRight = node.position.x + DEFAULT_CARD_WIDTH;
+            const nodeBottom = node.position.y + DEFAULT_CARD_HEIGHT;
+            const candidateRight = candidatePos.x + DEFAULT_CARD_WIDTH;
+            const candidateBottom = candidatePos.y + DEFAULT_CARD_HEIGHT;
+            
+            return !(
+              candidatePos.x >= nodeRight ||
+              candidateRight <= node.position.x ||
+              candidatePos.y >= nodeBottom ||
+              candidateBottom <= node.position.y
+            );
+          });
+          
+          if (!hasOverlap) {
+            return candidatePos;
+          }
+        }
+      }
+      
+      // Final fallback
+      return { 
+        x: sourceNode.position.x + offset, 
+        y: sourceNode.position.y + (Math.random() * 200)
+      };
+    })();
+    
+    // Calculate handles before saving to database  
+    const sourcePos = sourceNode?.position || { x: 0, y: 0 };
+    const targetPos = emptyPosition;
+    
+    const deltaX = targetPos.x - sourcePos.x;
+    const deltaY = targetPos.y - sourcePos.y;
+    
+    let sourceHandle, targetHandle;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX > 0) {
+        sourceHandle = 'project-output-right';
+        targetHandle = 'scratchpad-input-left';
+      } else {
+        sourceHandle = 'project-output-left';
+        targetHandle = 'scratchpad-input-right';
+      }
+    } else {
+      if (deltaY > 0) {
+        sourceHandle = 'project-output-bottom';
+        targetHandle = 'scratchpad-input-top';
+      } else {
+        sourceHandle = 'project-output-top';
+        targetHandle = 'scratchpad-input-bottom';
+      }
+    }
+    
+    // Save scratchpad to database with handle information
+    let scratchpadNodeId = `scratchpad-${Date.now()}`;
+    try {
+      const saveResponse = await fetch(`/api/projects/${sourceProjectId}/scratchpads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: '',
+          positionX: emptyPosition.x,
+          positionY: emptyPosition.y,
+          sourceHandle,
+          targetHandle
+        }),
+      });
+      
+      if (saveResponse.ok) {
+        const savedScratchpad = await saveResponse.json();
+        scratchpadNodeId = savedScratchpad.id;
+      } else {
+        console.error('Failed to save scratchpad to database');
+      }
+    } catch (error) {
+      console.error('Error saving scratchpad to database:', error);
+    }
+    
+    const newScratchpadNode = {
+      id: scratchpadNodeId,
+      type: 'scratchpadNode',
+      position: emptyPosition,
+      data: { 
+        scratchpadCard: {
+          id: scratchpadNodeId,
+          text: '',
+          projectId: sourceProjectId
+        },
+        onDelete: deleteScratchpadNode,
+        onContextMenu: handleScratchpadContextMenu
+      },
+      style: { 
+        width: DEFAULT_CARD_WIDTH, 
+        height: DEFAULT_CARD_HEIGHT 
+      }
+    };
+    
+    // Create edge connection using calculated handles
+    const newEdge = {
+      id: `edge-${sourceNodeId}-${scratchpadNodeId}`,
+      source: sourceNodeId,
+      target: scratchpadNodeId,
+      sourceHandle,
+      targetHandle,
+      type: 'smoothstep',
+      style: { 
+        stroke: isDarkMode ? '#3b82f6' : '#2563eb',
+        strokeWidth: 2,
+        strokeDasharray: '5,5'
+      },
+      animated: true
+    };
+    
+    setNodes(prev => [...prev, newScratchpadNode]);
+    setEdges(prev => [...prev, newEdge]);
+  }, [isDarkMode, handleScratchpadContextMenu, setNodes, setEdges]);
+
+  // Create image node
+  const createImageNode = useCallback(async (sourceProjectId) => {
+    const sourceNodeId = `project-${sourceProjectId}`;
+    
+    // Get current nodes to find empty position
+    const getCurrentNodes = () => {
+      let currentNodes = [];
+      setNodes(prev => {
+        currentNodes = prev;
+        return prev;
+      });
+      return currentNodes;
+    };
+    
+    const currentNodes = getCurrentNodes();
+    const sourceNode = currentNodes.find(n => n.id === sourceNodeId);
+    
+    // Use the same dynamic positioning logic as other nodes
+    const emptyPosition = (() => {
+      if (!sourceNode) return { x: 500, y: 0 };
+      
+      const offset = 500;
+      const directions = [
+        { x: offset, y: 0 },      // Right
+        { x: -offset, y: 0 },     // Left  
+        { x: 0, y: offset },      // Below
+        { x: 0, y: -offset },     // Above
+        { x: offset, y: offset }, // Bottom-right
+        { x: -offset, y: offset }, // Bottom-left
+        { x: offset, y: -offset }, // Top-right
+        { x: -offset, y: -offset } // Top-left
+      ];
+      
+      // Try each direction
+      for (const direction of directions) {
+        const candidatePos = { 
+          x: sourceNode.position.x + direction.x, 
+          y: sourceNode.position.y + direction.y
+        };
+        
+        // Check for overlaps using proper rectangle collision detection
+        const hasOverlap = currentNodes.some(node => {
+          const nodeRight = node.position.x + DEFAULT_CARD_WIDTH;
+          const nodeBottom = node.position.y + DEFAULT_CARD_HEIGHT;
+          const candidateRight = candidatePos.x + DEFAULT_CARD_WIDTH;
+          const candidateBottom = candidatePos.y + DEFAULT_CARD_HEIGHT;
+          
+          return !(
+            candidatePos.x >= nodeRight ||
+            candidateRight <= node.position.x ||
+            candidatePos.y >= nodeBottom ||
+            candidateBottom <= node.position.y
+          );
+        });
+        
+        if (!hasOverlap) {
+          return candidatePos;
+        }
+      }
+      
+      // Fallback: spiral outward from source
+      const spiralAttempts = 8;
+      for (let i = 1; i <= spiralAttempts; i++) {
+        const expandedOffset = offset + (i * 100);
+        for (const direction of directions) {
+          const candidatePos = { 
+            x: sourceNode.position.x + (direction.x !== 0 ? Math.sign(direction.x) * expandedOffset : 0), 
+            y: sourceNode.position.y + (direction.y !== 0 ? Math.sign(direction.y) * expandedOffset : 0)
+          };
+          
+          const hasOverlap = currentNodes.some(node => {
+            const nodeRight = node.position.x + DEFAULT_CARD_WIDTH;
+            const nodeBottom = node.position.y + DEFAULT_CARD_HEIGHT;
+            const candidateRight = candidatePos.x + DEFAULT_CARD_WIDTH;
+            const candidateBottom = candidatePos.y + DEFAULT_CARD_HEIGHT;
+            
+            return !(
+              candidatePos.x >= nodeRight ||
+              candidateRight <= node.position.x ||
+              candidatePos.y >= nodeBottom ||
+              candidateBottom <= node.position.y
+            );
+          });
+          
+          if (!hasOverlap) {
+            return candidatePos;
+          }
+        }
+      }
+      
+      // Final fallback
+      return { 
+        x: sourceNode.position.x + offset, 
+        y: sourceNode.position.y + (Math.random() * 200)
+      };
+    })();
+    
+    // Calculate handles before saving to database  
+    const sourcePos = sourceNode?.position || { x: 0, y: 0 };
+    const targetPos = emptyPosition;
+    
+    const deltaX = targetPos.x - sourcePos.x;
+    const deltaY = targetPos.y - sourcePos.y;
+    
+    let sourceHandle, targetHandle;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX > 0) {
+        sourceHandle = 'project-output-right';
+        targetHandle = 'image-input-left';
+      } else {
+        sourceHandle = 'project-output-left';
+        targetHandle = 'image-input-right';
+      }
+    } else {
+      if (deltaY > 0) {
+        sourceHandle = 'project-output-bottom';
+        targetHandle = 'image-input-top';
+      } else {
+        sourceHandle = 'project-output-top';
+        targetHandle = 'image-input-bottom';
+      }
+    }
+    
+    // Save image to database with handle information
+    let imageNodeId = `image-${Date.now()}`;
+    try {
+      const saveResponse = await fetch(`/api/projects/${sourceProjectId}/images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageUrl: '',
+          imageAlt: '',
+          positionX: emptyPosition.x,
+          positionY: emptyPosition.y,
+          sourceHandle,
+          targetHandle
+        }),
+      });
+      
+      if (saveResponse.ok) {
+        const savedImage = await saveResponse.json();
+        imageNodeId = savedImage.id;
+      } else {
+        console.error('Failed to save image to database');
+      }
+    } catch (error) {
+      console.error('Error saving image to database:', error);
+    }
+    
+    const newImageNode = {
+      id: imageNodeId,
+      type: 'imageNode',
+      position: emptyPosition,
+      data: { 
+        imageCard: {
+          id: imageNodeId,
+          imageUrl: '',
+          imageAlt: '',
+          projectId: sourceProjectId
+        },
+        onDelete: deleteImageNode,
+        onContextMenu: handleImageContextMenu
+      },
+      style: { 
+        width: DEFAULT_CARD_WIDTH, 
+        height: DEFAULT_CARD_HEIGHT 
+      }
+    };
+    
+    // Create edge connection using calculated handles
+    const newEdge = {
+      id: `edge-${sourceNodeId}-${imageNodeId}`,
+      source: sourceNodeId,
+      target: imageNodeId,
+      sourceHandle,
+      targetHandle,
+      type: 'smoothstep',
+      style: { 
+        stroke: isDarkMode ? '#3b82f6' : '#2563eb',
+        strokeWidth: 2,
+        strokeDasharray: '5,5'
+      },
+      animated: true
+    };
+    
+    setNodes(prev => [...prev, newImageNode]);
+    setEdges(prev => [...prev, newEdge]);
+  }, [isDarkMode, handleImageContextMenu, setNodes, setEdges]);
+
+  // Container manipulation functions
+  const updateContainerLabel = useCallback(async (containerId, newLabel) => {
+    try {
+      const containerNodeId = `container-${containerId}`;
+      const containerNode = nodes.find(n => n.id === containerNodeId);
+      if (!containerNode) return;
+      
+      const projectId = containerNode.data.containerCard.projectId;
+      
+      const response = await fetch(`/api/projects/${projectId}/containers/${containerId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ label: newLabel }),
+      });
+      
+      if (response.ok) {
+        setNodes(prev => prev.map(node => 
+          node.id === containerNodeId 
+            ? { 
+                ...node, 
+                data: { 
+                  ...node.data, 
+                  label: newLabel,
+                  containerCard: { ...node.data.containerCard, label: newLabel }
+                } 
+              }
+            : node
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating container label:', error);
+      toast.error('Failed to update container label');
+    }
+  }, [nodes, setNodes]);
+
+  const updateContainerColor = useCallback(async (containerId, newColor) => {
+    try {
+      const containerNodeId = `container-${containerId}`;
+      const containerNode = nodes.find(n => n.id === containerNodeId);
+      if (!containerNode) return;
+      
+      const projectId = containerNode.data.containerCard.projectId;
+      
+      const response = await fetch(`/api/projects/${projectId}/containers/${containerId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ color: newColor }),
+      });
+      
+      if (response.ok) {
+        setNodes(prev => prev.map(node => 
+          node.id === containerNodeId 
+            ? { 
+                ...node, 
+                data: { 
+                  ...node.data, 
+                  color: newColor,
+                  containerCard: { ...node.data.containerCard, color: newColor }
+                } 
+              }
+            : node
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating container color:', error);
+      toast.error('Failed to update container color');
+    }
+  }, [nodes, setNodes]);
+
+  const updateContainerSize = useCallback(async (containerId, newWidth, newHeight) => {
+    console.log('updateContainerSize called:', containerId, newWidth, newHeight);
+    try {
+      const containerNodeId = `container-${containerId}`;
+      const containerNode = nodes.find(n => n.id === containerNodeId);
+      if (!containerNode) {
+        console.error('Container node not found:', containerNodeId);
+        return;
+      }
+      
+      const projectId = containerNode.data.containerCard.projectId;
+      console.log('Updating container size via API:', projectId, containerId);
+      
+      const response = await fetch(`/api/projects/${projectId}/containers/${containerId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ width: newWidth, height: newHeight }),
+      });
+      
+      if (response.ok) {
+        setNodes(prev => prev.map(node => 
+          node.id === containerNodeId 
+            ? { 
+                ...node, 
+                data: { 
+                  ...node.data, 
+                  size: { width: newWidth, height: newHeight }
+                },
+                style: {
+                  ...node.style,
+                  width: newWidth,
+                  height: newHeight
+                }
+              }
+            : node
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating container size:', error);
+      toast.error('Failed to update container size');
+    }
+  }, [nodes, setNodes]);
+
+  const startContainerResize = useCallback((containerId) => {
+    // Mark this container as resizing to disable heavy drag grouping work
+    setNodes(prev => prev.map(node => {
+      if (node.id === `container-${containerId}`) {
+        return { ...node, data: { ...node.data, isResizing: true } };
+      }
+      return node;
+    }));
+  }, [setNodes]);
+
+  const endContainerResize = useCallback((containerId) => {
+    // Unmark resizing flag after resize completes
+    setNodes(prev => prev.map(node => {
+      if (node.id === `container-${containerId}`) {
+        return { ...node, data: { ...node.data, isResizing: false } };
+      }
+      return node;
+    }));
+  }, [setNodes]);
+
+  const deleteContainer = useCallback(async (containerId) => {
+    try {
+      const containerNodeId = `container-${containerId}`;
+      const containerNode = nodes.find(n => n.id === containerNodeId);
+      if (!containerNode) return;
+      
+      const projectId = containerNode.data.containerCard.projectId;
+      
+      const response = await fetch(`/api/projects/${projectId}/containers/${containerId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setNodes(prev => prev.filter(node => node.id !== containerNodeId));
+        toast.success('Container deleted');
+      }
+    } catch (error) {
+      console.error('Error deleting container:', error);
+      toast.error('Failed to delete container');
+    }
+  }, [nodes, setNodes]);
+
+  // Create container
+  const createContainer = useCallback(async (position) => {
+    try {
+      // Use the first project from the current projects list
+      if (!projects || projects.length === 0) {
+        toast.error('No projects available');
+        return;
+      }
+      
+      // For now, use the first project. In a real implementation, you might want to:
+      // - Detect which project area the user clicked in
+      // - Let the user choose the project
+      // - Use a currently "active" project
+      const projectId = projects[0].id;
+      
+      // Create container in database
+      const containerResponse = await fetch(`/api/projects/${projectId}/containers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          label: 'New Container',
+          color: '#3b82f6',
+          positionX: position.x,
+          positionY: position.y,
+          width: 300,
+          height: 200,
+          zIndex: 0
+        }),
+      });
+      
+      if (!containerResponse.ok) {
+        throw new Error('Failed to create container');
+      }
+      
+      const containerData = await containerResponse.json();
+      
+      // Create container node
+      const newContainerNode = {
+        id: `container-${containerData.id}`,
+        type: 'containerNode',
+        position: { x: position.x, y: position.y },
+        data: {
+          containerCard: {
+            id: containerData.id,
+            label: containerData.label,
+            color: containerData.color,
+            projectId: projectId
+          },
+          label: containerData.label,
+          color: containerData.color,
+          size: { width: containerData.width, height: containerData.height },
+          onUpdateLabel: updateContainerLabel,
+          onUpdateColor: updateContainerColor,
+          onUpdateSize: updateContainerSize,
+          onStartResize: startContainerResize,
+          onEndResize: endContainerResize,
+          onDelete: deleteContainer
+        },
+        style: { 
+          width: containerData.width, 
+          height: containerData.height,
+          zIndex: -1 // Ensure containers are behind nodes
+        },
+        zIndex: -1
+      };
+      
+      setNodes(prev => [...prev, newContainerNode]);
+      toast.success('Container created');
+      
+    } catch (error) {
+      console.error('Error creating container:', error);
+      toast.error('Failed to create container');
+    }
+  }, [projects, setNodes, updateContainerLabel, updateContainerColor, updateContainerSize, startContainerResize, deleteContainer]);
+
 
   // Helper function to check if a child node is already connected to a project
   const isChildNodeAlreadyConnected = useCallback((targetNodeId) => {
@@ -1251,7 +2242,7 @@ function ProjectCanvasFlow({ projects }) {
     const targetNode = nodes.find(n => n.id === params.target);
     
     // Check if trying to connect from a project node to a child node that's already connected
-    if (sourceNode?.type === 'projectNode' && targetNode && (targetNode.type === 'chatNode' || targetNode.type === 'tasksNode')) {
+    if (sourceNode?.type === 'projectNode' && targetNode && (targetNode.type === 'chatNode' || targetNode.type === 'tasksNode' || targetNode.type === 'scratchpadNode' || targetNode.type === 'imageNode')) {
       if (isChildNodeAlreadyConnected(params.target)) {
         console.log('[ProjectCanvas] Connection blocked: Child node already connected to a project');
         toast.error('This node already has a connection to a project');
@@ -1364,12 +2355,103 @@ function ProjectCanvasFlow({ projects }) {
         }).catch(error => console.error('Error saving task connection:', error));
         
         console.log('[ProjectCanvas] Saved task node connection to database');
+      } else if (targetNode.type === 'scratchpadNode' && targetNode.data.scratchpadCard) {
+        const oldProjectId = targetNode.data.scratchpadCard.projectId;
+        const isProjectTransfer = oldProjectId !== newProjectId;
+        
+        // Update scratchpad node's project relationship
+        const updateData = {
+          sourceHandle: params.sourceHandle,
+          targetHandle: params.targetHandle
+        };
+        
+        if (isProjectTransfer) {
+          updateData.projectId = newProjectId;
+          console.log(`[ProjectCanvas] Transferring scratchpad node ${targetNode.id} from project ${oldProjectId} to ${newProjectId}`);
+        }
+        
+        fetch(`/api/projects/${oldProjectId}/scratchpads/${targetNode.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData),
+        }).then(response => {
+          if (response.ok && isProjectTransfer) {
+            // Update the node's data in React Flow state
+            setNodes(prevNodes => 
+              prevNodes.map(node => 
+                node.id === targetNode.id 
+                  ? {
+                      ...node,
+                      data: {
+                        ...node.data,
+                        scratchpadCard: {
+                          ...node.data.scratchpadCard,
+                          projectId: newProjectId
+                        }
+                      }
+                    }
+                  : node
+              )
+            );
+          }
+        }).catch(error => console.error('Error saving scratchpad connection:', error));
+        
+        console.log('[ProjectCanvas] Saved scratchpad node connection to database');
+      } else if (targetNode.type === 'imageNode' && targetNode.data.imageCard) {
+        const oldProjectId = targetNode.data.imageCard.projectId;
+        const isProjectTransfer = oldProjectId !== newProjectId;
+        
+        // Update image node's project relationship
+        const updateData = {
+          sourceHandle: params.sourceHandle,
+          targetHandle: params.targetHandle
+        };
+        
+        if (isProjectTransfer) {
+          updateData.projectId = newProjectId;
+          console.log(`[ProjectCanvas] Transferring image node ${targetNode.id} from project ${oldProjectId} to ${newProjectId}`);
+        }
+        
+        fetch(`/api/projects/${oldProjectId}/images/${targetNode.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData),
+        }).then(response => {
+          if (response.ok && isProjectTransfer) {
+            // Update the node's data in React Flow state
+            setNodes(prevNodes => 
+              prevNodes.map(node => 
+                node.id === targetNode.id 
+                  ? {
+                      ...node,
+                      data: {
+                        ...node.data,
+                        imageCard: {
+                          ...node.data.imageCard,
+                          projectId: newProjectId
+                        }
+                      }
+                    }
+                  : node
+              )
+            );
+          }
+        }).catch(error => console.error('Error saving image connection:', error));
+        
+        console.log('[ProjectCanvas] Saved image node connection to database');
       }
       
       // Determine action type based on whether this is a cross-project transfer
-      const oldProjectId = targetNode.data.chatCard?.projectId || targetNode.data.tasksCard?.projectId;
+      const oldProjectId = targetNode.data.chatCard?.projectId || 
+                          targetNode.data.tasksCard?.projectId ||
+                          targetNode.data.scratchpadCard?.projectId ||
+                          targetNode.data.imageCard?.projectId;
       const actionType = oldProjectId !== newProjectId ? 'transferred to' : 'reconnected to';
-      toast.success(`${targetNode.type === 'chatNode' ? 'Q/A Node' : 'Task Node'} ${actionType} project`);
+      const nodeTypeLabel = targetNode.type === 'chatNode' ? 'Q/A Node' : 
+                         targetNode.type === 'tasksNode' ? 'Task Node' :
+                         targetNode.type === 'scratchpadNode' ? 'Scratchpad Node' :
+                         targetNode.type === 'imageNode' ? 'Image Node' : 'Node';
+    toast.success(`${nodeTypeLabel} ${actionType} project`);
     }
   }, [setEdges, isDarkMode, nodes, isChildNodeAlreadyConnected]);
 
@@ -1400,10 +2482,87 @@ function ProjectCanvasFlow({ projects }) {
       handleChatContextMenu(event, node.data.chatCard);
     } else if (node.type === 'tasksNode' && node.data.tasksCard) {
       handleTasksContextMenu(event, node.data.tasksCard);
+    } else if (node.type === 'scratchpadNode' && node.data.scratchpadCard) {
+      handleScratchpadContextMenu(event, node.data.scratchpadCard);
+    } else if (node.type === 'imageNode' && node.data.imageCard) {
+      handleImageContextMenu(event, node.data.imageCard);
     } else if (node.type === 'projectNode' && node.data.project) {
       handleContextMenu(event, node.data.project);
     }
   }, [handleChatContextMenu, handleTasksContextMenu, handleContextMenu]);
+
+  // Helper function to check if a node is inside a container
+  const isNodeInsideContainer = useCallback((node, container) => {
+    const nodeX = node.position.x;
+    const nodeY = node.position.y;
+    const nodeWidth = node.style?.width || DEFAULT_CARD_WIDTH;
+    const nodeHeight = node.style?.height || DEFAULT_CARD_HEIGHT;
+    
+    const containerX = container.position.x;
+    const containerY = container.position.y;
+    const containerWidth = container.style?.width || 300;
+    const containerHeight = container.style?.height || 200;
+    
+    // Check if node center is inside container bounds
+    const nodeCenterX = nodeX + nodeWidth / 2;
+    const nodeCenterY = nodeY + nodeHeight / 2;
+    
+    return nodeCenterX >= containerX && 
+           nodeCenterX <= containerX + containerWidth &&
+           nodeCenterY >= containerY && 
+           nodeCenterY <= containerY + containerHeight;
+  }, []);
+
+  // Handle node drag start to track containers
+  const onNodeDragStart = useCallback((event, node) => {
+    if (node.type === 'containerNode') {
+      // Find all nodes inside this container
+      const nodesInside = nodes.filter(n => 
+        n.type !== 'containerNode' && 
+        n.id !== node.id && 
+        isNodeInsideContainer(n, node)
+      );
+      
+      // Store the initial offset of each node relative to the container
+      const offsets = new Map();
+      nodesInside.forEach(n => {
+        offsets.set(n.id, {
+          x: n.position.x - node.position.x,
+          y: n.position.y - node.position.y
+        });
+      });
+      
+      // Store this information for use during drag
+      node.data.dragState = {
+        nodesInside: nodesInside.map(n => n.id),
+        offsets: offsets
+      };
+    }
+  }, [nodes, isNodeInsideContainer]);
+
+  // Handle container drag to move contained nodes
+  const onNodeDrag = useCallback((event, node) => {
+    if (node.type === 'containerNode' && node.data.dragState && !node.data.isResizing) {
+      const { nodesInside, offsets } = node.data.dragState;
+      
+      // Update positions of nodes inside the container
+      setNodes(prevNodes => 
+        prevNodes.map(n => {
+          if (nodesInside.includes(n.id)) {
+            const offset = offsets.get(n.id);
+            return {
+              ...n,
+              position: {
+                x: node.position.x + offset.x,
+                y: node.position.y + offset.y
+              }
+            };
+          }
+          return n;
+        })
+      );
+    }
+  }, [setNodes]);
 
   // Handle node drag end to save positions
   const onNodeDragStop = useCallback(async (event, node) => {
@@ -1437,6 +2596,36 @@ function ProjectCanvasFlow({ projects }) {
       } catch (error) {
         console.error('Error saving task node position:', error);
       }
+    } else if (node.type === 'scratchpadNode' && node.data.scratchpadCard) {
+      try {
+        await fetch(`/api/projects/${node.data.scratchpadCard.projectId}/scratchpads/${node.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            positionX: Number(node.position.x) || 0,
+            positionY: Number(node.position.y) || 0
+          }),
+        });
+      } catch (error) {
+        console.error('Error saving scratchpad node position:', error);
+      }
+    } else if (node.type === 'imageNode' && node.data.imageCard) {
+      try {
+        await fetch(`/api/projects/${node.data.imageCard.projectId}/images/${node.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            positionX: Number(node.position.x) || 0,
+            positionY: Number(node.position.y) || 0
+          }),
+        });
+      } catch (error) {
+        console.error('Error saving image node position:', error);
+      }
     } else if (node.type === 'projectNode' && node.data.project) {
       // Save project node position directly to project table
       try {
@@ -1465,6 +2654,21 @@ function ProjectCanvasFlow({ projects }) {
       } catch (error) {
         console.error('Error saving project node position:', error);
       }
+    } else if (node.type === 'containerNode' && node.data.containerCard) {
+      try {
+        await fetch(`/api/projects/${node.data.containerCard.projectId}/containers/${node.data.containerCard.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            positionX: Number(node.position.x) || 0,
+            positionY: Number(node.position.y) || 0
+          }),
+        });
+      } catch (error) {
+        console.error('Error saving container position:', error);
+      }
     }
   }, []);
 
@@ -1492,7 +2696,11 @@ function ProjectCanvasFlow({ projects }) {
         onSelectionChange={onSelectionChange}
         onNodesDelete={onNodesDelete}
         onNodeContextMenu={onNodeContextMenu}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
+        onPaneContextMenu={handlePaneContextMenu}
+        onPaneClick={() => setPaneContextMenu(null)}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.25}
@@ -1525,6 +2733,8 @@ function ProjectCanvasFlow({ projects }) {
           onClose={handleCloseContextMenu}
           onChat={() => handleChatWithProject(contextMenu.project)}
           onCreateTasks={() => createTaskNode(contextMenu.project.id)}
+          onCreateScratchpad={() => createScratchpadNode(contextMenu.project.id)}
+          onCreateImage={() => createImageNode(contextMenu.project.id)}
           onAddPage={() => handleAddPage(contextMenu.project)}
           onImportData={() => handleImportData(contextMenu.project)}
           onRegenerateVectors={() => handleRegenerateVectors(contextMenu.project)}
@@ -1533,6 +2743,33 @@ function ProjectCanvasFlow({ projects }) {
           }}
           onDelete={() => handleDeleteProject(contextMenu.project)}
         />
+      )}
+
+      {/* Pane Context Menu */}
+      {paneContextMenu && (
+        <div
+          className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
+          style={{
+            left: paneContextMenu.x,
+            top: paneContextMenu.y,
+          }}
+        >
+          <button
+            onClick={() => {
+              // Convert screen coordinates to canvas coordinates
+              const canvasPosition = {
+                x: paneContextMenu.position.x - 150, // Offset to center container on cursor
+                y: paneContextMenu.position.y - 100
+              };
+              createContainer(canvasPosition);
+              handleClosePaneContextMenu();
+            }}
+            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors cursor-pointer`}
+          >
+            <div className={`w-4 h-4 ${theme.accent}`}>📦</div>
+            <span className={`text-sm ${theme.text}`}>Add Container</span>
+          </button>
+        </div>
       )}
 
       {/* Chat Context Menu */}
@@ -1558,6 +2795,66 @@ function ProjectCanvasFlow({ projects }) {
           onExportTasks={() => handleExportTasks(tasksContextMenu.tasksCard)}
           onDetach={() => handleDetachNode(tasksContextMenu.tasksCard.id, 'tasksNode')}
         />
+      )}
+
+      {/* Scratchpad Context Menu */}
+      {scratchpadContextMenu && (
+        <div
+          className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
+          style={{
+            left: scratchpadContextMenu.x,
+            top: scratchpadContextMenu.y,
+          }}
+        >
+          <button
+            onClick={() => {
+              deleteScratchpadNode(scratchpadContextMenu.scratchpadCard.id);
+              handleCloseScratchpadContextMenu();
+            }}
+            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors text-red-500`}
+          >
+            Delete scratchpad
+          </button>
+          <button
+            onClick={() => {
+              handleDetachNode(scratchpadContextMenu.scratchpadCard.id, 'scratchpadNode');
+              handleCloseScratchpadContextMenu();
+            }}
+            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors ${theme.text}`}
+          >
+            Detach from project
+          </button>
+        </div>
+      )}
+
+      {/* Image Context Menu */}
+      {imageContextMenu && (
+        <div
+          className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
+          style={{
+            left: imageContextMenu.x,
+            top: imageContextMenu.y,
+          }}
+        >
+          <button
+            onClick={() => {
+              deleteImageNode(imageContextMenu.imageCard.id);
+              handleCloseImageContextMenu();
+            }}
+            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors text-red-500`}
+          >
+            Delete image
+          </button>
+          <button
+            onClick={() => {
+              handleDetachNode(imageContextMenu.imageCard.id, 'imageNode');
+              handleCloseImageContextMenu();
+            }}
+            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors ${theme.text}`}
+          >
+            Detach from project
+          </button>
+        </div>
       )}
 
       {/* Chat Modal */}
