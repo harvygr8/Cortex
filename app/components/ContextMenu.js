@@ -49,13 +49,6 @@ export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, o
 
   const nodeTypes = [
     {
-      icon: MessageSquare,
-      label: 'Q&A Node',
-      onClick: onChat,
-      color: theme.accent,
-      description: 'Ask questions about your project'
-    },
-    {
       icon: ClipboardList,
       label: 'Tasks Node',
       onClick: onCreateTasks,
@@ -80,9 +73,9 @@ export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, o
 
   const menuItems = [
     {
-      icon: Plus,
-      label: 'Add Node',
-      hasSubmenu: true,
+      icon: MessageSquare,
+      label: 'Ask a Question',
+      onClick: onChat,
       color: theme.accent
     },
     {
@@ -90,6 +83,12 @@ export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, o
       label: 'Add page',
       onClick: onAddPage,
       color: theme.text
+    },
+    {
+      icon: Plus,
+      label: 'Add Node',
+      hasSubmenu: true,
+      color: theme.accent
     },
     {
       icon: Upload,
@@ -121,6 +120,7 @@ export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, o
     <>
       <div
         ref={menuRef}
+        data-context-menu
         className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
         style={{
           left: x,
@@ -156,6 +156,7 @@ export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, o
       {/* Node Submenu */}
       {showNodeSubmenu && (
         <div
+          data-context-menu
           className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-56`}
           style={{
             left: submenuPosition.x,

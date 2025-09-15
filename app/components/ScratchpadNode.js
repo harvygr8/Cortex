@@ -8,7 +8,7 @@ import useThemeStore from '../../lib/stores/themeStore';
 const ScratchpadNode = memo(({ data, isConnectable, selected }) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
-  const { scratchpadCard, onDelete, onContextMenu } = data;
+  const { scratchpadCard, onDelete, onContextMenu, isConnecting } = data;
 
   const [text, setText] = useState(scratchpadCard.text || '');
   const [isSaving, setIsSaving] = useState(false);
@@ -96,7 +96,7 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }) => {
           : theme.border
         }
       `}>
-        {/* Target handles positioned on the card boundaries */}
+        {/* Target handles positioned on the card boundaries - only visible when selected */}
         <Handle
           type="target"
           position={Position.Left}
@@ -109,7 +109,9 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }) => {
             border: '2px solid white',
             left: '-6px',
             top: '50%',
-            transform: 'translateY(-50%)'
+            transform: 'translateY(-50%)',
+            opacity: (selected || isConnecting) ? 1 : 0,
+            visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
         <Handle
@@ -124,7 +126,9 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }) => {
             border: '2px solid white',
             right: '-6px',
             top: '50%',
-            transform: 'translateY(-50%)'
+            transform: 'translateY(-50%)',
+            opacity: (selected || isConnecting) ? 1 : 0,
+            visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
         <Handle
@@ -139,7 +143,9 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }) => {
             border: '2px solid white',
             top: '-6px',
             left: '50%',
-            transform: 'translateX(-50%)'
+            transform: 'translateX(-50%)',
+            opacity: (selected || isConnecting) ? 1 : 0,
+            visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
         <Handle
@@ -154,7 +160,9 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }) => {
             border: '2px solid white',
             bottom: '-6px',
             left: '50%',
-            transform: 'translateX(-50%)'
+            transform: 'translateX(-50%)',
+            opacity: (selected || isConnecting) ? 1 : 0,
+            visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
 

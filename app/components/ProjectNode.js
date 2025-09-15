@@ -8,7 +8,7 @@ import useThemeStore from '../../lib/stores/themeStore';
 const ProjectNode = memo(({ data, isConnectable, selected }) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
-  const { project, pages, onContextMenu } = data;
+  const { project, pages, onContextMenu, isConnecting } = data;
 
   // Calculate dynamic height based on content
   const calculateNodeHeight = () => {
@@ -74,7 +74,7 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
           height: `${nodeHeight}px`
         }}
       >
-        {/* Source handles positioned absolutely outside the content flow */}
+        {/* Source handles positioned absolutely outside the content flow - only visible when selected */}
         <Handle
           type="source"
           position={Position.Left}
@@ -89,7 +89,9 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             top: '50%',
             transform: 'translateY(-50%)',
             position: 'absolute',
-            zIndex: 1000
+            zIndex: 1000,
+            opacity: (selected || isConnecting) ? 1 : 0,
+            visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
         <Handle
@@ -106,7 +108,9 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             top: '50%',
             transform: 'translateY(-50%)',
             position: 'absolute',
-            zIndex: 1000
+            zIndex: 1000,
+            opacity: (selected || isConnecting) ? 1 : 0,
+            visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
         <Handle
@@ -123,7 +127,9 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             left: '50%',
             transform: 'translateX(-50%)',
             position: 'absolute',
-            zIndex: 1000
+            zIndex: 1000,
+            opacity: (selected || isConnecting) ? 1 : 0,
+            visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
         <Handle
@@ -140,7 +146,9 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
             left: '50%',
             transform: 'translateX(-50%)',
             position: 'absolute',
-            zIndex: 1000
+            zIndex: 1000,
+            opacity: (selected || isConnecting) ? 1 : 0,
+            visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
         {/* Header Row */}

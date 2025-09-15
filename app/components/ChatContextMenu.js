@@ -69,6 +69,7 @@ export default function ChatContextMenu({
   return (
     <div
       ref={menuRef}
+      data-context-menu
       className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
       style={{
         left: x,

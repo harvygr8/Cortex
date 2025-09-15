@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { Handle, Position, NodeResizer } from 'reactflow';
+import { NodeResizer } from 'reactflow';
 import { Palette, Trash2, Edit3 } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
@@ -111,7 +111,7 @@ const ContainerNode = memo(({ id, data, selected }) => {
     >
       {/* Header with label and controls */}
       <div 
-        className="absolute top-0 left-0 right-0 h-8 flex items-center justify-between px-3 rounded-t-lg cursor-move"
+        className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-4 rounded-t-lg cursor-move"
         style={{ backgroundColor: `${containerColor}20` }}
         onMouseDown={(e) => {
           // Only allow dragging if clicking on the header area itself, not the controls
@@ -136,12 +136,12 @@ const ContainerNode = memo(({ id, data, selected }) => {
                 setLabel(data.label || 'Container');
               }
             }}
-            className={`bg-transparent border-none outline-none text-xs font-medium ${theme.text} flex-1`}
+            className={`bg-transparent border-none outline-none text-lg font-medium ${theme.text} flex-1`}
             autoFocus
           />
         ) : (
           <span 
-            className={`text-xs font-medium ${theme.text} cursor-pointer flex-1 truncate`}
+            className={`text-lg font-medium ${theme.text} cursor-pointer flex-1 truncate`}
             onClick={() => setIsEditing(true)}
             style={{ color: containerColor }}
           >
@@ -159,10 +159,10 @@ const ContainerNode = memo(({ id, data, selected }) => {
                 setShowColorPicker(!showColorPicker);
               }}
               onMouseDown={(e) => e.stopPropagation()}
-              className={`p-1 rounded hover:bg-black/10 transition-colors nodrag`}
+              className={`p-1.5 rounded hover:bg-black/10 transition-colors nodrag`}
               title="Change color"
             >
-              <Palette className="w-3 h-3" style={{ color: containerColor }} />
+              <Palette className="w-4 h-4" style={{ color: containerColor }} />
             </button>
             
             {/* Color picker dropdown */}
@@ -202,10 +202,10 @@ const ContainerNode = memo(({ id, data, selected }) => {
               setIsEditing(true);
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className={`p-1 rounded hover:bg-black/10 transition-colors`}
+            className={`p-1.5 rounded hover:bg-black/10 transition-colors`}
             title="Edit label"
           >
-            <Edit3 className="w-3 h-3" style={{ color: containerColor }} />
+            <Edit3 className="w-4 h-4" style={{ color: containerColor }} />
           </button>
 
           {/* Delete button */}
@@ -215,10 +215,10 @@ const ContainerNode = memo(({ id, data, selected }) => {
               handleDelete();
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className={`p-1 rounded hover:bg-red-500/20 transition-colors`}
+            className={`p-1.5 rounded hover:bg-red-500/20 transition-colors`}
             title="Delete container"
           >
-            <Trash2 className="w-3 h-3 text-red-500" />
+            <Trash2 className="w-4 h-4 text-red-500" />
           </button>
         </div>
       </div>
@@ -290,19 +290,7 @@ const ContainerNode = memo(({ id, data, selected }) => {
         />
       )}
 
-      {/* Invisible handles for connections (if needed in the future) */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="opacity-0 pointer-events-none"
-        style={{ visibility: 'hidden' }}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="opacity-0 pointer-events-none"
-        style={{ visibility: 'hidden' }}
-      />
+      {/* No handles - containers are independent and don't support connections */}
     </div>
   );
 });

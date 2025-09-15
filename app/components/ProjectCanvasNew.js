@@ -73,6 +73,7 @@ function ProjectCanvasFlow({ projects }) {
   const [containers, setContainers] = useState([]);
   const [selectedContainer, setSelectedContainer] = useState(null);
   const [containerNodeMap, setContainerNodeMap] = useState(new Map());
+  const [isConnecting, setIsConnecting] = useState(false);
   
   // Track positions for debounced saving
   const savePositionsTimeoutRef = useRef(null);
@@ -1119,7 +1120,8 @@ function ProjectCanvasFlow({ projects }) {
             project,
             pages: projectPages[project.id] || [],
             onContextMenu: handleContextMenu,
-            onPageClick: (pageId, action) => handlePageClick(pageId, action, project)
+            onPageClick: (pageId, action) => handlePageClick(pageId, action, project),
+            isConnecting
           },
           style: { 
             width: DEFAULT_CARD_WIDTH, 
@@ -1150,7 +1152,8 @@ function ProjectCanvasFlow({ projects }) {
             data: {
               ...node.data,
               onDelete: deleteChatNode,
-              onContextMenu: handleChatContextMenu
+              onContextMenu: handleChatContextMenu,
+              isConnecting
             }
           };
         } else if (node.type === 'tasksNode') {
@@ -1159,7 +1162,8 @@ function ProjectCanvasFlow({ projects }) {
             data: {
               ...node.data,
               onDelete: deleteTaskNode,
-              onContextMenu: handleTasksContextMenu
+              onContextMenu: handleTasksContextMenu,
+              isConnecting
             }
           };
         } else if (node.type === 'scratchpadNode') {
@@ -1168,7 +1172,8 @@ function ProjectCanvasFlow({ projects }) {
             data: {
               ...node.data,
               onDelete: deleteScratchpadNode,
-              onContextMenu: handleScratchpadContextMenu
+              onContextMenu: handleScratchpadContextMenu,
+              isConnecting
             }
           };
         } else if (node.type === 'imageNode') {
@@ -1177,7 +1182,8 @@ function ProjectCanvasFlow({ projects }) {
             data: {
               ...node.data,
               onDelete: deleteImageNode,
-              onContextMenu: handleImageContextMenu
+              onContextMenu: handleImageContextMenu,
+              isConnecting
             }
           };
         } else if (node.type === 'projectNode') {
@@ -1186,14 +1192,15 @@ function ProjectCanvasFlow({ projects }) {
             data: {
               ...node.data,
               onContextMenu: handleContextMenu,
-              onPageClick: (pageId, action) => handlePageClick(pageId, action, node.data.project)
+              onPageClick: (pageId, action) => handlePageClick(pageId, action, node.data.project),
+              isConnecting
             }
           };
         }
         return node;
       })
     );
-  }, [handleContextMenu, handleChatContextMenu, handleTasksContextMenu, handleScratchpadContextMenu, handleImageContextMenu, deleteChatNode, deleteTaskNode, deleteScratchpadNode, deleteImageNode, handlePageClick]);
+  }, [handleContextMenu, handleChatContextMenu, handleTasksContextMenu, handleScratchpadContextMenu, handleImageContextMenu, deleteChatNode, deleteTaskNode, deleteScratchpadNode, deleteImageNode, handlePageClick, isConnecting]);
 
   // Update lastNodesRef when nodes are loaded/updated (but not during drags)
   useEffect(() => {
@@ -1209,6 +1216,27 @@ function ProjectCanvasFlow({ projects }) {
       if (savePositionsTimeoutRef.current) {
         clearTimeout(savePositionsTimeoutRef.current);
       }
+    };
+  }, []);
+
+  // Global click handler to close all context menus
+  useEffect(() => {
+    const handleGlobalClick = (event) => {
+      // Only close context menus if clicking outside of them
+      const isContextMenuClick = event.target.closest('[data-context-menu]');
+      if (!isContextMenuClick) {
+        setContextMenu(null);
+        setChatContextMenu(null);
+        setTasksContextMenu(null);
+        setScratchpadContextMenu(null);
+        setImageContextMenu(null);
+        setPaneContextMenu(null);
+      }
+    };
+
+    document.addEventListener('click', handleGlobalClick);
+    return () => {
+      document.removeEventListener('click', handleGlobalClick);
     };
   }, []);
 
@@ -2526,6 +2554,17 @@ function ProjectCanvasFlow({ projects }) {
     }
   }, [setEdges, isDarkMode, nodes, isChildNodeAlreadyConnected]);
 
+  // Connection event handlers to track when user is making a connection
+  const onConnectStart = useCallback(() => {
+    console.log('[ProjectCanvas] Connection started');
+    setIsConnecting(true);
+  }, []);
+
+  const onConnectEnd = useCallback(() => {
+    console.log('[ProjectCanvas] Connection ended');
+    setIsConnecting(false);
+  }, []);
+
   // Handle selection events
   const onSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }) => {
     console.log('Selected nodes:', selectedNodes.map(n => n.id));
@@ -2766,6 +2805,8 @@ function ProjectCanvasFlow({ projects }) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
         onSelectionChange={onSelectionChange}
         onNodesDelete={onNodesDelete}
         onNodeContextMenu={onNodeContextMenu}
@@ -2773,7 +2814,14 @@ function ProjectCanvasFlow({ projects }) {
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onPaneContextMenu={handlePaneContextMenu}
-        onPaneClick={() => setPaneContextMenu(null)}
+        onPaneClick={() => {
+          setPaneContextMenu(null);
+          setContextMenu(null);
+          setChatContextMenu(null);
+          setTasksContextMenu(null);
+          setScratchpadContextMenu(null);
+          setImageContextMenu(null);
+        }}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.25}

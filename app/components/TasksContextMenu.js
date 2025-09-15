@@ -1,12 +1,35 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { FileText, Trash2, Unlink } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
 const TasksContextMenu = memo(({ x, y, onClose, onDelete, onExportTasks, onDetach }) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -19,6 +42,8 @@ const TasksContextMenu = memo(({ x, y, onClose, onDelete, onExportTasks, onDetac
 
   return (
     <div
+      ref={menuRef}
+      data-context-menu
       className="fixed z-50"
       style={{ left: x, top: y }}
       onClick={handleClick}

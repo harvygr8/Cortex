@@ -89,8 +89,17 @@ export default function PageModal({ isOpen, onClose, pageId, projectId, onPageDe
 
   if (!isOpen) return null;
 
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      handleClose();
+    }
+  };
+
   return (
-    <div className={`fixed inset-0 ${theme.overlay} z-50 flex items-center justify-center`}>
+    <div 
+      className={`fixed inset-0 ${theme.overlay} z-50 flex items-center justify-center`}
+      onClick={handleOverlayClick}
+    >
       <div className={`${theme.modal?.background || theme.background} ${theme.modal?.text || theme.text} rounded-lg w-full max-w-5xl h-[85vh] mx-4 shadow-xl relative flex flex-col overflow-hidden`}>
         {/* Modal Header */}
         <div className={`${theme.background2} px-6 py-4 border-b ${theme.border} flex items-center justify-between`}>
