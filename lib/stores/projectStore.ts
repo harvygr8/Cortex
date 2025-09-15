@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-
-interface ProjectStore {
-  activeProjectId: string | null;
-  setActiveProjectId: (id: string | null) => void;
-  clearActiveProject: () => void;
-}
+import type { ProjectStore } from '../../types';
 
 const useProjectStore = create<ProjectStore>()(
   persist(

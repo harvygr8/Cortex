@@ -1,14 +1,22 @@
 'use client';
 
 import { memo } from 'react';
-import { Handle, Position } from 'reactflow';
+import { Handle, Position, NodeProps } from 'reactflow';
 import { MessageSquare, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import useThemeStore from '../../lib/stores/themeStore';
 import SourceBadge from './SourceBadge';
+import type { ChatCard } from '../../types';
 
-const ChatNode = memo(({ data, isConnectable, selected }: any) => {
+interface ChatNodeData {
+  chatCard: ChatCard;
+  onDelete: (id: string) => void;
+  onContextMenu: (e: React.MouseEvent, chatCard: ChatCard) => void;
+  isConnecting?: boolean;
+}
+
+const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData>) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const { chatCard, onDelete, onContextMenu, isConnecting } = data;

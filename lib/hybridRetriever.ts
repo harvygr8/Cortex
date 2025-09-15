@@ -1,35 +1,5 @@
 import { SimpleBM25Retriever } from './simpleBM25';
-import { SearchResult } from '../types';
-
-export interface DocumentWithContent extends SearchResult {
-  hasFullContent: boolean;
-  originalContent: string;
-}
-
-export interface HybridSearchResult {
-  pageContent: string;
-  metadata: {
-    projectId: string;
-    pageId: string;
-    pageTitle: string;
-    sqlitePageId?: string;
-    score?: number;
-    source?: string;
-  };
-  fullContent?: string;
-  hybridScore: number;
-  source: 'semantic' | 'keyword' | 'hybrid';
-  semanticRank?: number;
-  keywordRank?: number;
-  semanticScore?: number;
-  bm25Score?: number;
-  normalizedBM25?: number;
-}
-
-export interface SearchWeights {
-  semantic: number;
-  keyword: number;
-}
+import { SearchResult, DocumentWithContent, HybridSearchResult, SearchWeights } from '../types';
 
 export class HybridRetriever {
   public vectorStore: any;

@@ -4,24 +4,9 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { ensureDir } from 'fs-extra';
 import { HybridRetriever } from './hybridRetriever';
 import fileLogger from './utils/fileLogger';
-import { Project, Page, SearchResult } from '../types';
+import { Project, Page, SearchResult, VectorDocument } from '../types';
 
 let instance: ProjectVectorStore | null = null;
-
-interface VectorDocument {
-  pageContent: string;
-  metadata: {
-    projectId: string;
-    projectTitle?: string;
-    pageId: string;
-    pageTitle: string;
-    sqlitePageId?: string;
-    sqliteProjectId?: string;
-    hasFullContent?: boolean;
-    contentLength?: number;
-    [key: string]: any;
-  };
-}
 
 export class ProjectVectorStore {
   public embeddings!: OllamaEmbeddings;

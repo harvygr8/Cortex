@@ -1,0 +1,31 @@
+---
+description: Database operations, API routes, and technical implementation patterns
+globs: app/api/**/*.ts,lib/projectStore.ts,lib/stores/**/*.ts
+---
+
+# Technical Implementation Rules
+
+## Database Operations
+- Always initialize database first: `await projectStore.initialize()`
+- SQLite booleans are integers (0/1) - convert with `Boolean(value)`
+- Follow foreign key relationships when deleting (children before parents)
+- Use snake_case for all database field names
+
+## API Route Patterns
+- Import parameter types from centralized types file
+- Structure: initialize DB → validate params → try-catch main logic
+- Use proper HTTP status codes (400 client errors, 500 server errors)
+- Return consistent JSON responses with error/success patterns
+- Log detailed errors for debugging, return user-friendly messages
+
+## Error Handling Strategy
+- Try-catch blocks around all async operations
+- API routes: log detailed errors, return user-friendly messages
+- Components: show toast notifications for user-facing errors
+- Database: always initialize before operations
+
+## Project Architecture
+- Cortex: knowledge management platform with visual canvas interface
+- Node types: Projects, Pages (markdown), Chat (AI), Tasks, Containers, Images, Scratchpads
+- Tech stack: Next.js, React, TypeScript, SQLite, Ollama (local AI)
+- Key files: `types/index.ts` • `lib/projectStore.ts` • `app/components/ProjectCanvasNew.tsx` • `lib/contextAgent.ts`

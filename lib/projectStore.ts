@@ -2,17 +2,7 @@ import { Database } from 'sqlite3';
 import { open, Database as SqliteDatabase } from 'sqlite';
 import { ensureDir } from 'fs-extra';
 import path from 'path';
-
-interface PageOrder {
-  id: string;
-  order_index: number;
-}
-
-interface TaskUpdates {
-  text?: string;
-  completed?: boolean;
-  order_index?: number;
-}
+import type { PageOrder, TaskUpdates } from '../types';
 
 class ProjectStore {
   private db: SqliteDatabase | null = null;

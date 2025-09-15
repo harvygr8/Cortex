@@ -1,0 +1,30 @@
+---
+description: React components, UI patterns, and frontend architecture
+globs: app/components/**/*.tsx,app/**/*.tsx
+---
+
+# Frontend & React Rules
+
+## Component Architecture
+- Interactive components need `'use client'` directive at top
+- Import all types from centralized types file using relative paths
+- Components follow PascalCase naming (`ProjectCanvasNew.tsx`)
+
+## Canvas & Node System
+- Canvas nodes use proper TypeScript typing with node data interfaces
+- Position data uses snake_case (`position_x`, `position_y`)
+- Draggable nodes: Projects, Pages, Chat conversations, Task lists, Containers, Images, Scratchpads
+
+## Theme & Styling
+- Access theme colors through theme store for light/dark mode support
+- Use `isDarkMode ? colors.dark : colors.light` pattern
+- Support both light and dark themes consistently
+
+## Performance & Effects
+- Wrap expensive components with `React.memo`
+- Clean up event listeners in `useEffect` cleanup functions
+- Use proper dependency arrays in hooks
+
+## Event Handling
+- Event handlers use `handle` prefix (`handleClick`, `handleSubmit`)
+- Context menus should handle proper positioning and cleanup

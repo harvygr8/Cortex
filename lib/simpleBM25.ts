@@ -1,9 +1,6 @@
-import { SearchResult } from '../types';
+import { SearchResult, BM25Document } from '../types';
 
 // Simple BM25-like retriever implementation
-export interface BM25Document extends SearchResult {
-  score?: number;
-}
 
 export class SimpleBM25Retriever {
   private documents: BM25Document[];

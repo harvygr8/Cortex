@@ -1,0 +1,29 @@
+---
+alwaysApply: true
+description: Naming conventions, TypeScript standards, and core coding patterns
+---
+
+# Coding Standards & Conventions
+
+## Type System (CRITICAL)
+- **All types must be centralized in `types/index.ts`** - never create interfaces in component files
+- Import types with relative paths from components, absolute paths from API routes
+- Use strict TypeScript mode, fix all linting errors, never use `any` type
+
+## Naming Conventions
+- **Files:** PascalCase (components), camelCase (utilities), kebab-case (routes)
+- **Variables/Functions:** camelCase (`projectId`, `getUserData`)
+- **Constants:** UPPER_SNAKE_CASE (`API_BASE_URL`, `DEFAULT_THEME`)
+- **Database fields:** snake_case (`position_x`, `task_list_id`, `created_at`)
+- **Event handlers:** `handle` prefix (`handleClick`, `handleSubmit`)
+- **Booleans:** `is/has/can` prefix (`isLoading`, `hasPermission`, `canEdit`)
+
+## Code Quality
+- Use descriptive names, avoid abbreviations (`userData` not `usrData`)
+- Functions are verbs, variables are nouns
+- Prefer `const` over `let`, never use `var`
+- Use template literals for string interpolation
+- Keep functions small and single-purpose, use early returns
+
+## Import Organization
+React/Next.js → third-party libraries → internal components → types → relative imports

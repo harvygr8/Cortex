@@ -1,11 +1,24 @@
 'use client';
 
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { NodeResizer } from 'reactflow';
+import { NodeResizer, NodeProps } from 'reactflow';
 import { Palette, Trash2, Edit3 } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
+import type { ContainerCard } from '../../types';
 
-const ContainerNode = memo(({ id, data, selected }: any) => {
+interface ContainerNodeData {
+  containerCard?: ContainerCard;
+  label?: string;
+  color?: string;
+  size?: { width: number; height: number };
+  onUpdateLabel?: (id: string, label: string) => void | Promise<void>;
+  onUpdateColor?: (id: string, color: string) => void | Promise<void>;
+  onDelete?: (id: string) => void;
+  onStartResize?: (id: string) => void;
+  onEndResize?: (id: string) => void;
+}
+
+const ContainerNode = memo(({ id, data, selected }: NodeProps<ContainerNodeData>) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   

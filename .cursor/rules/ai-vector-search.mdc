@@ -1,0 +1,26 @@
+---
+description: AI agents, vector search, and semantic functionality
+globs: lib/contextAgent.ts,lib/vectorStore.ts,lib/hybridRetriever.ts,lib/simpleBM25.ts
+---
+
+# AI & Vector Search Rules
+
+## Core Principles
+- AI features are **non-critical** - log errors but never break core app functionality
+- Search and AI should degrade gracefully when unavailable
+- Always initialize systems before processing operations
+
+## Vector Search Operations
+- After content changes, regenerate AI vectors for search functionality
+- Use hybrid search combining semantic similarity with keyword matching
+- Vector operations should be async and handle failures gracefully
+
+## AI Agent Interactions
+- Initialize context agent before calling question processing functions
+- Process project-specific questions with proper project context
+- Return structured responses with sources and metadata when available
+
+## Error Handling
+- Log detailed AI/vector errors for debugging
+- Provide fallback responses when AI systems are unavailable
+- Never let vector/AI failures prevent core CRUD operations

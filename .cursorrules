@@ -1,0 +1,212 @@
+# Cortex Project Rules
+
+## Project Overview
+Cortex is a knowledge management and AI-powered workspace application built with Next.js, React, TypeScript, and SQLite. It features a visual canvas interface for organizing projects, pages, chat conversations, task lists, and other content.
+
+## Type System Rules
+
+### CRITICAL: Always use centralized types
+- **NEVER** define interfaces or types in component files
+- **ALWAYS** import types from `types/index.ts`
+- **ALWAYS** export new types to `types/index.ts` first before using them
+- If you need a new type, add it to `types/index.ts` with proper documentation
+
+### Type Naming Conventions
+- Use PascalCase for interfaces: `ChatCard`, `ProjectStore`
+- Use descriptive names that match database schema
+- Database fields use snake_case: `position_x`, `position_y`, `created_at`
+- Type properties should match database column names exactly
+
+### Database Schema Alignment
+- All entity types must match SQLite database schema
+- Use `position_x`/`position_y` not nested `position: { x, y }`
+- Use `text` for task content, not `title`
+- Use `task_list_id` for task relationships, not `listId` or `taskListId`
+
+## File Structure Rules
+
+### API Routes
+- All API routes must use `type { APIRouteParams } from '@/types'`
+- Follow RESTful conventions: GET, POST, PUT, DELETE
+- Always handle errors with proper HTTP status codes
+- Use `projectStore.initialize()` before database operations
+
+### Components
+- Use `'use client'` directive for client components
+- Import types from `../../types` (relative to components)
+- Use proper TypeScript generics for React Flow components
+- Memoize expensive components with `React.memo`
+
+### Store Files
+- Zustand stores go in `lib/stores/`
+- Database operations go in `lib/projectStore.ts`
+- Always use centralized types, never define local interfaces
+
+## Database Rules
+
+### CRITICAL: Always initialize projectStore
+```typescript
+await projectStore.initialize();
+```
+- Must be called before any database operation
+- Handles SQLite connection and table creation
+- Is idempotent (safe to call multiple times)
+
+### Database Operations
+- Use transactions for multi-step operations
+- Always handle foreign key constraints in deletion order
+- Use parameterized queries to prevent SQL injection
+- Convert SQLite boolean integers to JavaScript booleans
+
+### Vector Store Integration
+- Always regenerate vectors after content changes
+- Use `vectorStore.createOrUpdateProjectIndex(project)`
+- Handle vector store errors gracefully (non-fatal)
+
+## React Flow Rules
+
+### Node Types
+- Use custom node types: `projectNode`, `chatNode`, `tasksNode`, etc.
+- Node data must match centralized type definitions
+- Handle node positioning with `position_x`/`position_y` properties
+
+### Canvas Operations
+- Save canvas state after position changes
+- Use debounced saving for performance
+- Handle node connections and disconnections properly
+
+## Theme and Styling Rules
+
+### Theme System
+- Use `useThemeStore` for theme access
+- Access theme via `isDarkMode ? colors.dark : colors.light`
+- All theme properties are defined in `lib/colors.ts`
+- Use Tailwind classes with theme-aware styling
+
+### Component Styling
+- Use theme properties: `theme.background`, `theme.text`, etc.
+- Support both light and dark modes
+- Use consistent spacing and typography
+- Apply proper focus states and hover effects
+
+## AI and Context Rules
+
+### Context Agent
+- Use `ContextAgent.processProjectQuestion()` for AI queries
+- Handle different query modes: RAG, GENERAL, SUMMARY
+- Always provide proper context and sources
+- Log AI operations for debugging
+
+### Vector Search
+- Use hybrid search (semantic + BM25) for better results
+- Initialize BM25 with full content from SQLite
+- Handle search result ranking and filtering
+- Provide source attribution for all AI responses
+
+## Error Handling Rules
+
+### API Error Handling
+```typescript
+try {
+  // operation
+  return NextResponse.json(result);
+} catch (error) {
+  console.error('Operation failed:', error);
+  return NextResponse.json(
+    { error: 'User-friendly message' },
+    { status: 500 }
+  );
+}
+```
+
+### Client Error Handling
+- Use try-catch blocks for async operations
+- Show user-friendly error messages
+- Log detailed errors to console for debugging
+- Handle network failures gracefully
+
+## Performance Rules
+
+### Optimization
+- Use `React.memo` for expensive components
+- Implement proper loading states
+- Use debounced operations for frequent updates
+- Lazy load heavy components when possible
+
+### Memory Management
+- Clean up event listeners in useEffect cleanup
+- Avoid memory leaks in long-running operations
+- Use proper dependency arrays in useEffect
+- Clear timeouts and intervals
+
+## Security Rules
+
+### Data Validation
+- Validate all user inputs
+- Sanitize data before database operations
+- Use proper TypeScript types for validation
+- Handle edge cases and malformed data
+
+### File Operations
+- Validate file types and sizes
+- Use secure file paths
+- Clean up temporary files
+- Handle file permission errors
+
+## Development Rules
+
+### Code Quality
+- Use TypeScript strict mode
+- Fix all linting errors before committing
+- Write descriptive variable and function names
+- Add JSDoc comments for complex functions
+
+### Testing
+- Test API endpoints with proper error cases
+- Test component behavior in both light and dark modes
+- Test database operations with edge cases
+- Verify type safety across the application
+
+## File Organization
+
+### Import Order
+1. React and Next.js imports
+2. Third-party library imports
+3. Internal component imports
+4. Type imports (from `../../types`)
+5. Relative imports
+
+### Export Patterns
+- Use named exports for utilities
+- Use default exports for components
+- Export types from `types/index.ts`
+- Use barrel exports for related functionality
+
+## Critical Reminders
+
+1. **ALWAYS** use centralized types from `types/index.ts`
+2. **NEVER** define interfaces in component files
+3. **ALWAYS** call `projectStore.initialize()` before DB operations
+4. **ALWAYS** handle errors with proper user feedback
+5. **ALWAYS** support both light and dark themes
+6. **ALWAYS** use proper TypeScript types, never `any`
+7. **ALWAYS** follow database schema naming conventions
+8. **ALWAYS** test in both development and production modes
+
+## Common Patterns
+
+### Creating a new entity type
+1. Add interface to `types/index.ts`
+2. Update database schema in `projectStore.ts`
+3. Create API routes with proper validation
+4. Update components to use new type
+5. Test all CRUD operations
+
+### Adding a new component
+1. Create component file with proper TypeScript types
+2. Import types from `../../types`
+3. Use theme system for styling
+4. Handle loading and error states
+5. Add to appropriate node types if needed
+
+This project requires strict adherence to these rules for maintainability, type safety, and consistent user experience.

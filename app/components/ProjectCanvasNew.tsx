@@ -37,121 +37,24 @@ import TasksNode from './TasksNode';
 import ScratchpadNode from './ScratchpadNode';
 import ImageNode from './ImageNode';
 import ContainerNode from './ContainerNode';
-
-// Type definitions
-interface Project {
-  id: string;
-  title: string;
-  description?: string;
-  created_at?: string;
-  updated_at?: string;
-  position_x?: number;
-  position_y?: number;
-}
-
-interface ChatCard {
-  id: string;
-  projectId: string;
-  query: string;
-  response: string;
-  sources?: any[];
-  created_at?: string;
-}
-
-interface TasksCard {
-  id: string;
-  projectId: string;
-  title: string;
-  tasks: Task[];
-  created_at?: string;
-}
-
-interface Task {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
-interface ScratchpadCard {
-  id: string;
-  projectId: string;
-  text: string;
-  created_at?: string;
-}
-
-interface ImageCard {
-  id: string;
-  projectId: string;
-  imageUrl: string;
-  imageAlt: string;
-  created_at?: string;
-}
-
-interface Container {
-  id: string;
-  projectId: string;
-  label: string;
-  color: string;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-}
-
-interface PageData {
-  projectId: string;
-  title: string;
-  content: string;
-}
-
-interface Page {
-  id: string;
-  projectId: string;
-  title: string;
-  content: string;
-  created_at?: string;
-}
-
-interface ContextMenuState {
-  isOpen: boolean;
-  x: number;
-  y: number;
-  project?: Project;
-  initialQuery?: string;
-  position?: { x: number; y: number };
-}
-
-interface PageModalState {
-  isOpen: boolean;
-  pageId?: string;
-  projectId?: string;
-}
-
-interface ChatContextMenuState {
-  isOpen: boolean;
-  x: number;
-  y: number;
-  chatCard?: ChatCard;
-}
-
-interface TasksContextMenuState {
-  isOpen: boolean;
-  x: number;
-  y: number;
-  tasksCard?: TasksCard;
-}
-
-interface ScratchpadContextMenuState {
-  isOpen: boolean;
-  x: number;
-  y: number;
-  scratchpadCard?: ScratchpadCard;
-}
-
-interface ImageContextMenuState {
-  isOpen: boolean;
-  x: number;
-  y: number;
-  imageCard?: ImageCard;
-}
+import type { 
+  Project, 
+  ChatCard, 
+  TasksCard, 
+  Task, 
+  ScratchpadCard, 
+  ImageCard, 
+  ContainerCard,
+  PageData, 
+  Page,
+  PageWithProject, 
+  ContextMenuState, 
+  PageModalState, 
+  ChatContextMenuState, 
+  TasksContextMenuState, 
+  ScratchpadContextMenuState, 
+  ImageContextMenuState 
+} from '../../types';
 
 // Default card and grid settings
 const DEFAULT_CARD_WIDTH = 420;
@@ -196,8 +99,8 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
   const [addPageModal, setAddPageModal] = useState<{ isOpen: boolean; project?: Project } | null>(null);
   const [pageModal, setPageModal] = useState<PageModalState | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
-  const [containers, setContainers] = useState<Container[]>([]);
-  const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
+  const [containers, setContainers] = useState<ContainerCard[]>([]);
+  const [selectedContainer, setSelectedContainer] = useState<ContainerCard | null>(null);
   const [containerNodeMap, setContainerNodeMap] = useState<Map<string, string>>(new Map());
   const [isConnecting, setIsConnecting] = useState(false);
   
