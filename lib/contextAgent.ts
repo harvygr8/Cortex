@@ -4,6 +4,11 @@ import { ResponseNode, GuardRailNode, QueryClassifierNode, GeneralResponderNode 
 import fileLogger from './utils/fileLogger';
 
 export class ContextAgent {
+  private responder: any;
+  private guardRail: any;
+  private classifier: any;
+  private generalResponder: any;
+  
   constructor() {
     this.responder = new ResponseNode();
     this.guardRail = new GuardRailNode();
@@ -11,6 +16,20 @@ export class ContextAgent {
     this.generalResponder = new GeneralResponderNode();
 
   }
+
+  // Declare methods that will be added via prototype
+  findMostRelevantPages!: (project: any, question: string, maxPages?: number) => Promise<any[]>;
+  getRelevantChunksFromPages!: (selectedPages: any[], question: string, allSearchResults: any[]) => Promise<any[]>;
+  filterChunksByRelevance!: (chunks: any[], question: string, questionTerms: string[]) => any[];
+  buildSimplifiedContext!: (rankedResults: any[], question: string) => string;
+  buildRankPreservingContext!: (rankedResults: any[], question: string, contentStrategy?: string) => string;
+  buildFocusedContext!: (relevantChunks: any[], question: string, selectedPages: any[]) => string;
+  getPageContent!: (pageId: string) => Promise<string | null>;
+  applyRelevanceFilter!: (results: any[], question: string) => any[];
+  extractKeyTerms!: (question: string) => string[];
+  hasPartialTermMatch!: (queryTerm: string, content: string) => boolean;
+  calculateContentQuality!: (content: string, questionTerms: string[]) => number;
+
 
   static async initialize() {
     const instance = new ContextAgent();
@@ -22,7 +41,7 @@ export class ContextAgent {
     return instance;
   }
 
-  async processProjectQuestion(projectId, question) {
+  async processProjectQuestion(projectId: string, question: string): Promise<any> {
     // Suppress all console output during processing
     const originalConsole = { log: console.log, warn: console.warn, error: console.error };
     console.log = () => {};
@@ -125,7 +144,7 @@ export class ContextAgent {
             
             // Use top N chunks with clear ranking based on mode
             const topResults = searchResults.slice(0, chunkLimit);
-            const topScore = searchResults[0]?.hybridScore || 0;
+            const topScore = (searchResults[0] as any)?.hybridScore || 0;
             
             await fileLogger.logSelectedChunks(topResults);
             await fileLogger.logRankings(topResults);
@@ -138,7 +157,7 @@ export class ContextAgent {
               context
             });
             await fileLogger.logIntermediateNode('ResponseNode', {
-              sources: response.sources?.map(s => s.title),
+              sources: response.sources?.map((s: any) => s.title),
               answerLength: response.content?.length || 0,
               answerPreview: (response.content || '').substring(0, 200)
             });
@@ -171,7 +190,7 @@ export class ContextAgent {
           console.log('\n🔬 [ContextAgent] ===== HYBRID ALGORITHM METRICS =====');
           
           // Score distribution analysis
-          const scores = searchResults.map(doc => doc.hybridScore || 0).filter(score => score !== undefined);
+            const scores = searchResults.map((doc: any) => doc.hybridScore || 0).filter((score: any) => score !== undefined);
           const scoreStats = {
             min: Math.min(...scores),
             max: Math.max(...scores),
@@ -188,17 +207,17 @@ export class ContextAgent {
           // Source analysis
           const sourceAnalysis = searchResults.reduce((acc, doc) => {
             const source = doc.source || 'unknown';
-            if (!acc[source]) {
-              acc[source] = { count: 0, totalScore: 0, scores: [] };
+            if (!(acc as any)[source]) {
+              (acc as any)[source] = { count: 0, totalScore: 0, scores: [] };
             }
-            acc[source].count++;
-            acc[source].totalScore += doc.hybridScore || 0;
-            acc[source].scores.push(doc.hybridScore || 0);
+            (acc as any)[source].count++;
+             (acc as any)[source].totalScore += (doc as any).hybridScore || 0;
+             (acc as any)[source].scores.push((doc as any).hybridScore || 0);
             return acc;
           }, {});
           
           console.log('\n🎯 Source Performance Analysis:');
-          Object.entries(sourceAnalysis).forEach(([source, data]) => {
+          Object.entries(sourceAnalysis).forEach(([source, data]: [string, any]) => {
             const avgScore = data.totalScore / data.count;
             const minScore = Math.min(...data.scores);
             const maxScore = Math.max(...data.scores);
@@ -212,7 +231,7 @@ export class ContextAgent {
           console.log('\n🏆 Ranking Analysis:');
           searchResults.forEach((doc, index) => {
             const rank = index + 1;
-            const score = doc.hybridScore || 0;
+            const score = (doc as any).hybridScore || 0;
             const source = doc.source || 'unknown';
             const scorePercentile = ((score - scoreStats.min) / (scoreStats.max - scoreStats.min) * 100).toFixed(1);
             
@@ -222,11 +241,11 @@ export class ContextAgent {
             console.log(`      Content Length: ${doc.pageContent.length} chars`);
             
             // Show individual component scores if available
-            if (doc.semanticRank !== undefined) {
-              console.log(`      🧠 Semantic Rank: ${doc.semanticRank + 1}`);
+            if ((doc as any).semanticRank !== undefined) {
+              console.log(`      🧠 Semantic Rank: ${(doc as any).semanticRank + 1}`);
             }
-            if (doc.keywordRank !== undefined) {
-              console.log(`      🔍 Keyword Rank: ${doc.keywordRank + 1}`);
+            if ((doc as any).keywordRank !== undefined) {
+              console.log(`      🔍 Keyword Rank: ${(doc as any).keywordRank + 1}`);
             }
           });
           
@@ -241,7 +260,7 @@ export class ContextAgent {
           console.log(`    Keyword Only: ${keywordResults} results (${((keywordResults/searchResults.length)*100).toFixed(1)}%)`);
           
           // Quality metrics
-          const highQualityResults = searchResults.filter(doc => (doc.hybridScore || 0) > scoreStats.avg).length;
+           const highQualityResults = searchResults.filter((doc: any) => (doc.hybridScore || 0) > scoreStats.avg).length;
           console.log(`    High Quality Results (>avg): ${highQualityResults}/${searchResults.length} (${((highQualityResults/searchResults.length)*100).toFixed(1)}%)`);
           
           console.log('==================================================\n');
@@ -251,22 +270,22 @@ export class ContextAgent {
           searchResults.forEach((doc, index) => {
             console.log(`\n  Result ${index + 1}:`);
             console.log(`    📄 Page: ${doc.metadata.pageTitle}`);
-            console.log(`    🎯 Score: ${doc.hybridScore?.toFixed(4) || 'N/A'}`);
+             console.log(`    🎯 Score: ${(doc as any).hybridScore?.toFixed(4) || 'N/A'}`);
             console.log(`    🔗 Source: ${doc.source}`);
             console.log(`    📍 Project: ${doc.metadata.projectId}`);
             console.log(`    📝 Content Preview: ${doc.pageContent.substring(0, 100)}...`);
             
             // Show additional metadata if available
-            if (doc.semanticRank !== undefined) {
-              console.log(`    🧠 Semantic Rank: ${doc.semanticRank + 1}`);
+            if ((doc as any).semanticRank !== undefined) {
+              console.log(`    🧠 Semantic Rank: ${(doc as any).semanticRank + 1}`);
             }
-            if (doc.keywordRank !== undefined) {
-              console.log(`    🔍 Keyword Rank: ${doc.keywordRank + 1}`);
+            if ((doc as any).keywordRank !== undefined) {
+              console.log(`    🔍 Keyword Rank: ${(doc as any).keywordRank + 1}`);
             }
           });
           
           console.log('\n🎯 [ContextAgent] HYBRID SEARCH SUMMARY:');
-          const sourceCounts = searchResults.reduce((acc, doc) => {
+          const sourceCounts = searchResults.reduce((acc: any, doc: any) => {
             acc[doc.source || 'unknown'] = (acc[doc.source || 'unknown'] || 0) + 1;
             return acc;
           }, {});
@@ -275,16 +294,16 @@ export class ContextAgent {
             console.log(`    ${source}: ${count} results`);
           });
           
-          const avgScore = searchResults.reduce((sum, doc) => sum + (doc.hybridScore || 0), 0) / searchResults.length;
+           const avgScore = searchResults.reduce((sum: any, doc: any) => sum + (doc.hybridScore || 0), 0) / searchResults.length;
           console.log(`    Average Score: ${avgScore.toFixed(4)}`);
           console.log('==================================================\n');
           
         } catch (searchError) {
           
           // If it's a dimension mismatch during search, regenerate the vectors
-          if (searchError.message.includes('Query vector must have the same length') || 
-              searchError.message.includes('dimensions') ||
-              searchError.message.includes('length')) {
+          if ((searchError as any).message.includes('Query vector must have the same length') || 
+              (searchError as any).message.includes('dimensions') ||
+              (searchError as any).message.includes('length')) {
             
             try {
               const regeneratedVectors = await vectorStore.forceRegenerateProject(project);
@@ -324,7 +343,7 @@ export class ContextAgent {
         
         // Use top N chunks with clear ranking based on mode
         const topResults = searchResults.slice(0, chunkLimit);
-        const topScore = searchResults[0]?.hybridScore || 0;
+         const topScore = (searchResults[0] as any)?.hybridScore || 0;
         
         await fileLogger.logSelectedChunks(topResults);
         await fileLogger.logRankings(topResults);
@@ -338,7 +357,7 @@ export class ContextAgent {
         });
         
         await fileLogger.logIntermediateNode('ResponseNode', {
-          sources: response.sources?.map(s => s.title),
+          sources: response.sources?.map((s: any) => s.title),
           answerLength: response.content?.length || 0,
           answerPreview: (response.content || '').substring(0, 200)
         });
@@ -353,7 +372,7 @@ export class ContextAgent {
           }
         };
         
-      } catch (vectorError) {
+      } catch (vectorError: any) {
         // If it's a dimension mismatch, try one more regeneration
         if (vectorError.message.includes('Query vector must have the same length') || 
             vectorError.message.includes('dimensions') ||
@@ -361,7 +380,13 @@ export class ContextAgent {
           
           try {
             // Clear ALL vector stores to ensure clean state
-            await vectorStore.clearAllVectorStores();
+            // Clear vector stores - method may not exist, handle gracefully
+            try {
+              // Note: clearAllVectorStores method doesn't exist in ProjectVectorStore
+              console.warn('clearAllVectorStores method not available');
+            } catch (e) {
+              console.warn('Could not clear vector stores:', e);
+            }
             
             const regeneratedVectors = await vectorStore.forceRegenerateProject(project);
             if (regeneratedVectors) {
@@ -397,7 +422,7 @@ export class ContextAgent {
 export default new ContextAgent();
 
 // STEP 1: Find the most relevant pages for a question
-ContextAgent.prototype.findMostRelevantPages = async function(project, question, maxPages = 3) {
+ContextAgent.prototype.findMostRelevantPages = async function(project: any, question: string, maxPages = 3) {
   console.log(`[ContextAgent] 🎯 Finding top ${maxPages} relevant pages for: "${question}"`);
   console.log(`[ContextAgent] Analyzing ${project.pages.length} pages in project`);
   
@@ -416,7 +441,7 @@ ContextAgent.prototype.findMostRelevantPages = async function(project, question,
   
   // Score each page based on question relevance
   const scoredPages = await Promise.all(
-    project.pages.map(async (page) => {
+    project.pages.map(async (page: any) => {
       try {
         const content = await this.getPageContent(page.id);
         if (!content || content.length < 50) {
@@ -432,7 +457,7 @@ ContextAgent.prototype.findMostRelevantPages = async function(project, question,
         let contentMatches = 0;
         
         // Title matching gets very high weight (titles are key indicators)
-        questionTerms.forEach(term => {
+        questionTerms.forEach((term: string) => {
           if (title.includes(term)) {
             score += 1.0; // Very strong title match
             titleMatches++;
@@ -517,14 +542,14 @@ ContextAgent.prototype.findMostRelevantPages = async function(project, question,
 };
 
 // STEP 2: Get relevant chunks from selected pages
-ContextAgent.prototype.getRelevantChunksFromPages = async function(selectedPages, question, allSearchResults) {
+ContextAgent.prototype.getRelevantChunksFromPages = async function(selectedPages: any[], question: string, allSearchResults: any[]) {
   console.log(`[ContextAgent] Extracting relevant chunks from ${selectedPages.length} pages`);
   
-  const selectedPageIds = new Set(selectedPages.map(page => page.id));
+  const selectedPageIds = new Set(selectedPages.map((page: any) => page.id));
   const questionTerms = this.extractKeyTerms(question.toLowerCase());
   
   // Filter search results to only include chunks from selected pages
-  const chunksFromSelectedPages = allSearchResults.filter(chunk => {
+  const chunksFromSelectedPages = allSearchResults.filter((chunk: any) => {
     const chunkPageId = chunk.metadata?.pageId || chunk.metadata?.sqlitePageId;
     return selectedPageIds.has(chunkPageId);
   });
@@ -535,7 +560,7 @@ ContextAgent.prototype.getRelevantChunksFromPages = async function(selectedPages
     console.log('[ContextAgent] No chunks found from selected pages, using page content directly');
     
     // If no chunks found, create chunks from page content
-    const directChunks = selectedPages.map(page => ({
+    const directChunks = selectedPages.map((page: any) => ({
       pageContent: page.content,
       metadata: {
         pageId: page.id,
@@ -554,10 +579,10 @@ ContextAgent.prototype.getRelevantChunksFromPages = async function(selectedPages
 };
 
 // Filter chunks by relevance to the question
-ContextAgent.prototype.filterChunksByRelevance = function(chunks, question, questionTerms) {
+ContextAgent.prototype.filterChunksByRelevance = function(chunks: any[], question: string, questionTerms: string[]) {
   console.log(`[ContextAgent] Filtering ${chunks.length} chunks for relevance`);
   
-  const scoredChunks = chunks.map(chunk => {
+  const scoredChunks = chunks.map((chunk: any) => {
     const content = (chunk.pageContent || chunk.fullContent || '').toLowerCase();
     const title = (chunk.metadata?.pageTitle || '').toLowerCase();
     
@@ -566,7 +591,7 @@ ContextAgent.prototype.filterChunksByRelevance = function(chunks, question, ques
     let termMatches = 0;
     
     // Check for term matches
-    questionTerms.forEach(term => {
+    questionTerms.forEach((term: string) => {
       if (content.includes(term)) {
         score += 0.5;
         termMatches++;
@@ -603,12 +628,12 @@ ContextAgent.prototype.filterChunksByRelevance = function(chunks, question, ques
   
   // Sort by relevance and filter out irrelevant chunks
   const relevantChunks = scoredChunks
-    .filter(chunk => chunk.chunkRelevanceScore >= 0.3) // Minimum chunk relevance
-    .sort((a, b) => b.chunkRelevanceScore - a.chunkRelevanceScore)
+    .filter((chunk: any) => chunk.chunkRelevanceScore >= 0.3) // Minimum chunk relevance
+    .sort((a: any, b: any) => b.chunkRelevanceScore - a.chunkRelevanceScore)
     .slice(0, 5); // Limit to top 5 chunks
   
   console.log('[ContextAgent] Chunk relevance analysis:');
-  scoredChunks.slice(0, 8).forEach((chunk, index) => {
+  scoredChunks.slice(0, 8).forEach((chunk: any, index: number) => {
     const selected = relevantChunks.includes(chunk) ? '✅' : '❌';
     console.log(`  ${selected} Chunk ${index + 1}: "${chunk.metadata?.pageTitle}" - Score: ${chunk.chunkRelevanceScore.toFixed(3)} (${chunk.termMatches} matches)`);
   });
@@ -618,7 +643,7 @@ ContextAgent.prototype.filterChunksByRelevance = function(chunks, question, ques
 };
 
 // SIMPLIFIED: Build context with clear ranking and generous content limits
-ContextAgent.prototype.buildSimplifiedContext = function(rankedResults, question) {
+ContextAgent.prototype.buildSimplifiedContext = function(rankedResults: any[], question: string) {
   console.log(`[ContextAgent] Building simplified context from ${rankedResults.length} chunks`);
   
   let context = `QUESTION TO ANSWER: "${question}"\n\n`;
@@ -628,10 +653,10 @@ ContextAgent.prototype.buildSimplifiedContext = function(rankedResults, question
     context += `RANK 2 and RANK 3 provide additional context and supporting information.\n\n`;
   
   // Add each chunk with clear ranking and generous content
-  rankedResults.forEach((result, index) => {
+  rankedResults.forEach((result: any, index: number) => {
     const rank = index + 1;
     const pageTitle = result.metadata?.pageTitle || 'Unknown Page';
-    const hybridScore = result.hybridScore?.toFixed(4) || 'N/A';
+     const hybridScore = (result as any).hybridScore?.toFixed(4) || 'N/A';
     const source = result.source || 'unknown';
     
     context += `==================== RANK ${rank} ====================\n`;
@@ -671,7 +696,7 @@ ContextAgent.prototype.buildSimplifiedContext = function(rankedResults, question
 };
 
 // LEGACY: Keep old method for compatibility
-ContextAgent.prototype.buildRankPreservingContext = function(rankedResults, question, contentStrategy = 'RANK_1_DOMINANT') {
+ContextAgent.prototype.buildRankPreservingContext = function(rankedResults: any[], question: string, contentStrategy = 'RANK_1_DOMINANT') {
   console.log(`[ContextAgent] Building rank-preserving context from ${rankedResults.length} hybrid search results`);
   console.log(`[ContextAgent] Content strategy: ${contentStrategy}`);
   
@@ -681,10 +706,10 @@ ContextAgent.prototype.buildRankPreservingContext = function(rankedResults, ques
   context += `⚠️ INSTRUCTION: Extract and use the information from these sections to answer the question.\n\n`;
   
   // Add content in ranking order (preserving hybrid search ranking)
-  rankedResults.forEach((result, index) => {
+  rankedResults.forEach((result: any, index: number) => {
     const rank = index + 1;
     const pageTitle = result.metadata?.pageTitle || 'Unknown Page';
-    const hybridScore = result.hybridScore?.toFixed(4) || 'N/A';
+     const hybridScore = (result as any).hybridScore?.toFixed(4) || 'N/A';
     const source = result.source || 'unknown';
     
     context += `=== RANK ${rank} (Score: ${hybridScore}, Source: ${source}): ${pageTitle} ===\n`;
@@ -739,7 +764,7 @@ ContextAgent.prototype.buildRankPreservingContext = function(rankedResults, ques
   });
   
   // Add content summary and emphasis
-  const topicsFound = rankedResults.map((result, index) => {
+  const topicsFound = rankedResults.map((result: any, index: number) => {
     const rank = index + 1;
     const title = result.metadata?.pageTitle || 'Unknown';
     const contentPreview = (result.fullContent || result.pageContent || '').substring(0, 100);
@@ -758,12 +783,12 @@ ContextAgent.prototype.buildRankPreservingContext = function(rankedResults, ques
 };
 
 // LEGACY: Build focused context with anti-hallucination measures (kept for compatibility)
-ContextAgent.prototype.buildFocusedContext = function(relevantChunks, question, selectedPages) {
+ContextAgent.prototype.buildFocusedContext = function(relevantChunks: any[], question: string, selectedPages: any[]) {
   console.log(`[ContextAgent] Building focused context from ${relevantChunks.length} chunks`);
   
   // Group chunks by page for better organization
   const chunksByPage = new Map();
-  relevantChunks.forEach(chunk => {
+  relevantChunks.forEach((chunk: any) => {
     const pageId = chunk.metadata?.pageId || chunk.metadata?.sqlitePageId;
     if (!chunksByPage.has(pageId)) {
       chunksByPage.set(pageId, []);
@@ -776,12 +801,12 @@ ContextAgent.prototype.buildFocusedContext = function(relevantChunks, question, 
   
   // Add content organized by page
   chunksByPage.forEach((chunks, pageId) => {
-    const page = selectedPages.find(p => p.id === pageId);
+    const page = selectedPages.find((p: any) => p.id === pageId);
     const pageTitle = page?.title || chunks[0]?.metadata?.pageTitle || 'Unknown Page';
     
     context += `=== Page: ${pageTitle} ===\n`;
     
-    chunks.forEach((chunk, index) => {
+    chunks.forEach((chunk: any, index: number) => {
       const content = chunk.fullContent || chunk.pageContent || '';
       context += `\nSection ${index + 1}:\n${content}\n`;
     });
@@ -796,7 +821,7 @@ ContextAgent.prototype.buildFocusedContext = function(relevantChunks, question, 
 };
 
 // Get page content from SQLite
-ContextAgent.prototype.getPageContent = async function(pageId) {
+ContextAgent.prototype.getPageContent = async function(pageId: string) {
   try {
     const projectStore = await import('./projectStore');
     const page = await projectStore.default.getPage(pageId);
@@ -808,7 +833,7 @@ ContextAgent.prototype.getPageContent = async function(pageId) {
 };
 
 // Legacy method - keeping for compatibility
-ContextAgent.prototype.applyRelevanceFilter = function(results, question) {
+ContextAgent.prototype.applyRelevanceFilter = function(results: any[], question: string) {
   if (results.length === 0) return results;
   
   console.log(`[ContextAgent] Applying relevance filter to ${results.length} results`);
@@ -824,7 +849,7 @@ ContextAgent.prototype.applyRelevanceFilter = function(results, question) {
   }
   
   // Score each result based on relevance
-  const scoredResults = results.map(result => {
+  const scoredResults = results.map((result: any) => {
     const content = (result.pageContent || result.fullContent || '').toLowerCase();
     const title = (result.metadata?.pageTitle || '').toLowerCase();
     const combinedText = `${title} ${content}`;
@@ -840,7 +865,7 @@ ContextAgent.prototype.applyRelevanceFilter = function(results, question) {
     const contentQualityScore = this.calculateContentQuality(content, questionTerms);
     
     // Calculate hybrid score (if available) contribution
-    const hybridScore = result.hybridScore || 0;
+     const hybridScore = (result as any).hybridScore || 0;
     const normalizedHybridScore = Math.min(hybridScore / 2, 1); // Normalize to 0-1 range
     
     // Combined relevance score
@@ -860,11 +885,11 @@ ContextAgent.prototype.applyRelevanceFilter = function(results, question) {
   });
   
   // Sort by relevance score
-  scoredResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
+  scoredResults.sort((a: any, b: any) => b.relevanceScore - a.relevanceScore);
   
   // Apply aggressive threshold - only keep highly relevant results
   const threshold = 0.2; // Aggressive threshold for better quality
-  const relevantResults = scoredResults.filter(result => {
+  const relevantResults = scoredResults.filter((result: any) => {
     const isRelevant = result.relevanceScore >= threshold;
     if (!isRelevant) {
       console.log(`[ContextAgent] 🚫 Filtered out: ${result.metadata?.pageTitle} (score: ${result.relevanceScore.toFixed(3)})`);
@@ -891,7 +916,7 @@ ContextAgent.prototype.applyRelevanceFilter = function(results, question) {
 };
 
 // Extract meaningful terms from question
-ContextAgent.prototype.extractKeyTerms = function(question) {
+ContextAgent.prototype.extractKeyTerms = function(question: string) {
   const stopWords = new Set([
     'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
     'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -907,13 +932,13 @@ ContextAgent.prototype.extractKeyTerms = function(question) {
   
   return question.toLowerCase()
     .split(/\s+/)
-    .filter(term => term.length > 2 && !stopWords.has(term))
-    .map(term => term.replace(/[^\w]/g, ''))
-    .filter(term => term.length > 0);
+    .filter((term: string) => term.length > 2 && !stopWords.has(term))
+    .map((term: string) => term.replace(/[^\w]/g, ''))
+    .filter((term: string) => term.length > 0);
 };
 
 // Check for partial term matches
-ContextAgent.prototype.hasPartialTermMatch = function(queryTerm, content) {
+ContextAgent.prototype.hasPartialTermMatch = function(queryTerm: string, content: string) {
   if (queryTerm.length < 4) return false;
   
   // Check for substring matches (at least 75% of term length)
@@ -923,7 +948,7 @@ ContextAgent.prototype.hasPartialTermMatch = function(queryTerm, content) {
 };
 
 // Calculate content quality score based on question terms
-ContextAgent.prototype.calculateContentQuality = function(content, questionTerms) {
+ContextAgent.prototype.calculateContentQuality = function(content: string, questionTerms: string[]) {
   if (!content || content.length < 50) return 0;
   
   // Penalize very short content

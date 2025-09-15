@@ -1,9 +1,14 @@
 'use client';
+import React from 'react';
 
 import { useEffect, useState } from 'react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function ThemeWrapper({ children }) {
+interface ThemeWrapperProps {
+  children: React.ReactNode;
+}
+
+export default function ThemeWrapper({ children }: ThemeWrapperProps) {
   const [isClient, setIsClient] = useState(false);
   const { isDarkMode, colors } = useThemeStore();
 

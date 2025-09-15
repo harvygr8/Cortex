@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../lib/projectStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 
 // GET /api/projects/[projectId]/scratchpads
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     await projectStore.initialize();
     const scratchpads = await projectStore.getScratchpadsByProject(params.projectId);
     return NextResponse.json(scratchpads);
@@ -15,13 +19,13 @@ export async function GET(request, { params }) {
     );
   }
 }
-
 // POST /api/projects/[projectId]/scratchpads
-export async function POST(request, { params }) {
+export async function POST(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     const { text = '', positionX = 0, positionY = 0, sourceHandle = null, targetHandle = null } = await request.json();
-
     const scratchpad = await projectStore.addScratchpad(
       params.projectId,
       text,
@@ -30,7 +34,6 @@ export async function POST(request, { params }) {
       sourceHandle,
       targetHandle
     );
-
     return NextResponse.json(scratchpad);
   } catch (error) {
     console.error('Error creating scratchpad:', error);

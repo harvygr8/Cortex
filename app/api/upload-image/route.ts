@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
@@ -8,14 +9,12 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const projectId = formData.get('projectId') as string | null;
-
     if (!file || !projectId) {
       return NextResponse.json(
         { error: 'No file or project ID provided' },
         { status: 400 }
       );
     }
-
     // Validate file type
     if (!file.type.startsWith('image/')) {
       return NextResponse.json(
@@ -23,33 +22,27 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
     // Create project-specific directory
     const projectImagesDir = join(process.cwd(), 'public', 'images', projectId);
     if (!existsSync(projectImagesDir)) {
       await mkdir(projectImagesDir, { recursive: true });
     }
-
     // Generate unique filename
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop() || 'png';
     const filename = `${timestamp}.${fileExtension}`;
     const filepath = join(projectImagesDir, filename);
-
     // Convert file to buffer and save
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     await writeFile(filepath, buffer);
-
     // Return the public URL
     const imageUrl = `/images/${projectId}/${filename}`;
-
     return NextResponse.json({
       success: true,
       imageUrl,
       filename: file.name
     });
-
   } catch (error) {
     console.error('Error uploading image:', error);
     return NextResponse.json(

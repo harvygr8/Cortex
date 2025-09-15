@@ -1,19 +1,20 @@
 'use client';
+import React from 'react';
 
 import { memo, useState, useEffect, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
 import { StickyNote, X, Save } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-const ScratchpadNode = memo(({ data, isConnectable, selected }) => {
+const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const { scratchpadCard, onDelete, onContextMenu, isConnecting } = data;
 
   const [text, setText] = useState(scratchpadCard.text || '');
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState(null);
-  const saveTimeoutRef = useRef(null);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef(null);
 
   const MAX_CHARS = 1500;
@@ -66,13 +67,13 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }) => {
     };
   }, [text, scratchpadCard.text]);
 
-  const handleContextMenu = (e) => {
+  const handleContextMenu = (e: React.MouseEvent) => {
     if (onContextMenu) {
       onContextMenu(e, scratchpadCard);
     }
   };
 
-  const handleTextChange = (e) => {
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     if (newText.length <= MAX_CHARS) {
       setText(newText);

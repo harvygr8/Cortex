@@ -1,10 +1,19 @@
 'use client';
+import React from 'react';
 
 import { useState, useEffect } from 'react';
 import { X, Send } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function ChatModal({ isOpen, onClose, onSubmit, projectTitle, initialQuery }) {
+interface ChatModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (query: string) => void;
+  projectTitle: string;
+  initialQuery?: string;
+}
+
+export default function ChatModal({ isOpen, onClose, onSubmit, projectTitle, initialQuery }: ChatModalProps) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const [query, setQuery] = useState('');
@@ -19,7 +28,7 @@ export default function ChatModal({ isOpen, onClose, onSubmit, projectTitle, ini
     }
   }, [isOpen, initialQuery]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || isLoading) return;
 
@@ -35,16 +44,16 @@ export default function ChatModal({ isOpen, onClose, onSubmit, projectTitle, ini
     }
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      handleSubmit(e as any);
     }
   };
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e) => {
+  const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }

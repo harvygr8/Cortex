@@ -1,6 +1,18 @@
+import { SearchResult } from '../types';
+
 // Simple BM25-like retriever implementation
+export interface BM25Document extends SearchResult {
+  score?: number;
+}
+
 export class SimpleBM25Retriever {
-  constructor(documents = []) {
+  private documents: BM25Document[];
+  private termFrequencies: Map<number, Map<string, number>>;
+  private documentFrequencies: Map<string, number>;
+  private totalDocuments: number;
+  private averageDocumentLength: number;
+
+  constructor(documents: BM25Document[] = []) {
     this.documents = documents;
     this.termFrequencies = new Map();
     this.documentFrequencies = new Map();
@@ -9,30 +21,30 @@ export class SimpleBM25Retriever {
     this.initialize();
   }
 
-  initialize() {
+  initialize(): void {
     if (this.documents.length === 0) return;
 
     // Calculate average document length in tokens, not characters
-    const tokenLengths = this.documents.map(doc => this.tokenize(doc.pageContent).length);
-    const totalTokens = tokenLengths.reduce((sum, len) => sum + len, 0);
+    const tokenLengths = this.documents.map((doc: BM25Document) => this.tokenize(doc.pageContent).length);
+    const totalTokens = tokenLengths.reduce((sum: number, len: number) => sum + len, 0);
     this.averageDocumentLength = totalTokens / this.totalDocuments;
 
     // Build term frequency and document frequency maps
-    this.documents.forEach((doc, docIndex) => {
+    this.documents.forEach((doc: BM25Document, docIndex: number) => {
       const terms = this.tokenize(doc.pageContent);
-      const termCounts = new Map();
+      const termCounts = new Map<string, number>();
 
       // Count terms in this document
-      terms.forEach(term => {
+      terms.forEach((term: string) => {
         termCounts.set(term, (termCounts.get(term) || 0) + 1);
       });
 
       // Update document frequencies
-      termCounts.forEach((count, term) => {
+      termCounts.forEach((count: number, term: string) => {
         if (!this.documentFrequencies.has(term)) {
           this.documentFrequencies.set(term, 0);
         }
-        this.documentFrequencies.set(term, this.documentFrequencies.get(term) + 1);
+        this.documentFrequencies.set(term, this.documentFrequencies.get(term)! + 1);
       });
 
       // Store term frequencies for this document
@@ -44,22 +56,22 @@ export class SimpleBM25Retriever {
     
     // Log some statistics for debugging
     const topTerms = Array.from(this.documentFrequencies.entries())
-      .sort((a, b) => b[1] - a[1])
+      .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
       .slice(0, 10);
-    console.log(`[SimpleBM25] Top terms:`, topTerms.map(([term, freq]) => `${term}(${freq})`).join(', '));
+    console.log(`[SimpleBM25] Top terms:`, topTerms.map(([term, freq]: [string, number]) => `${term}(${freq})`).join(', '));
   }
 
-  tokenize(text) {
+  tokenize(text: string): string[] {
     // Enhanced tokenization: lowercase, split on whitespace, remove short terms
     return text.toLowerCase()
       .split(/\s+/)
-      .filter(term => term.length > 1) // Reduced from 2 to 1 to include more terms
-      .map(term => term.replace(/[^\w]/g, ''))
-      .filter(term => term.length > 0 && !this.isStopWord(term));
+      .filter((term: string) => term.length > 1) // Reduced from 2 to 1 to include more terms
+      .map((term: string) => term.replace(/[^\w]/g, ''))
+      .filter((term: string) => term.length > 0 && !this.isStopWord(term));
   }
   
   // Basic stop word filtering to improve relevance
-  isStopWord(term) {
+  isStopWord(term: string): boolean {
     const stopWords = new Set([
       'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
       'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -70,7 +82,7 @@ export class SimpleBM25Retriever {
     return stopWords.has(term);
   }
 
-  calculateBM25Score(docIndex, queryTerms) {
+  calculateBM25Score(docIndex: number, queryTerms: string[]): number {
     const doc = this.documents[docIndex];
     const docLength = this.tokenize(doc.pageContent).length; // Use token count, not char count
     const termFreqs = this.termFrequencies.get(docIndex);
@@ -79,8 +91,8 @@ export class SimpleBM25Retriever {
     const k1 = 1.2; // BM25 parameter
     const b = 0.75;  // BM25 parameter
 
-    queryTerms.forEach(term => {
-      const tf = termFreqs.get(term) || 0;
+    queryTerms.forEach((term: string) => {
+      const tf = termFreqs?.get(term) || 0;
       const df = this.documentFrequencies.get(term) || 0;
       
       if (df > 0 && tf > 0) {
@@ -95,7 +107,7 @@ export class SimpleBM25Retriever {
     return score;
   }
 
-  async getRelevantDocuments(query, k = 5) {
+  async getRelevantDocuments(query: string, k = 5): Promise<BM25Document[]> {
     const queryTerms = this.tokenize(query);
     
     if (queryTerms.length === 0) {
@@ -106,16 +118,16 @@ export class SimpleBM25Retriever {
     console.log(`[SimpleBM25] Query terms:`, queryTerms);
 
     // Calculate scores for all documents
-    const scoredDocs = this.documents.map((doc, index) => ({
+    const scoredDocs = this.documents.map((doc: BM25Document, index: number): BM25Document => ({
       ...doc,
       score: this.calculateBM25Score(index, queryTerms)
     }));
 
     // Sort by score (descending) and apply aggressive filtering
-    const sortedDocs = scoredDocs.sort((a, b) => b.score - a.score);
+    const sortedDocs = scoredDocs.sort((a: BM25Document, b: BM25Document) => (b.score || 0) - (a.score || 0));
     
     // Calculate dynamic threshold based on score distribution
-    const positiveScores = sortedDocs.map(doc => doc.score).filter(score => score > 0);
+    const positiveScores = sortedDocs.map((doc: BM25Document) => doc.score || 0).filter((score: number) => score > 0);
     
     let results;
     if (positiveScores.length === 0) {
@@ -124,7 +136,7 @@ export class SimpleBM25Retriever {
     }
     
     const maxScore = Math.max(...positiveScores);
-    const avgScore = positiveScores.reduce((sum, score) => sum + score, 0) / positiveScores.length;
+    const avgScore = positiveScores.reduce((sum: number, score: number) => sum + score, 0) / positiveScores.length;
     
     // Set aggressive threshold - must be at least 20% of max score or 50% of average
     const minThreshold = 0.1; // Absolute minimum
@@ -137,10 +149,10 @@ export class SimpleBM25Retriever {
     console.log(`[SimpleBM25] Score stats - Max: ${maxScore.toFixed(3)}, Avg: ${avgScore.toFixed(3)}, Threshold: ${dynamicThreshold.toFixed(3)}`);
     
     // Filter by threshold
-    const thresholdFilteredDocs = sortedDocs.filter(doc => {
-      const isRelevant = doc.score >= dynamicThreshold;
+    const thresholdFilteredDocs = sortedDocs.filter((doc: BM25Document) => {
+      const isRelevant = (doc.score || 0) >= dynamicThreshold;
       if (!isRelevant) {
-        console.log(`[SimpleBM25] Filtered out: ${doc.metadata?.pageTitle} (score: ${doc.score.toFixed(3)} < ${dynamicThreshold.toFixed(3)})`);
+        console.log(`[SimpleBM25] Filtered out: ${doc.metadata?.pageTitle} (score: ${(doc.score || 0).toFixed(3)} < ${dynamicThreshold.toFixed(3)})`);
       }
       return isRelevant;
     });
@@ -155,14 +167,14 @@ export class SimpleBM25Retriever {
 
     console.log(`[SimpleBM25] Query: "${query}" -> ${results.length} results`);
     if (results.length > 0) {
-      console.log(`[SimpleBM25] Score range: ${Math.min(...results.map(r => r.score)).toFixed(3)} to ${Math.max(...results.map(r => r.score)).toFixed(3)}`);
-      console.log(`[SimpleBM25] Top result: ${results[0].metadata?.pageTitle || 'Unknown'} (score: ${results[0].score.toFixed(3)})`);
+      console.log(`[SimpleBM25] Score range: ${Math.min(...results.map((r: BM25Document) => r.score || 0)).toFixed(3)} to ${Math.max(...results.map((r: BM25Document) => r.score || 0)).toFixed(3)}`);
+      console.log(`[SimpleBM25] Top result: ${results[0].metadata?.pageTitle || 'Unknown'} (score: ${results[0].score?.toFixed(3) || 'N/A'})`);
     }
     return results;
   }
 
   // Method to add new documents
-  addDocuments(newDocuments) {
+  addDocuments(newDocuments: BM25Document[]): void {
     this.documents.push(...newDocuments);
     this.initialize();
   }

@@ -1,10 +1,10 @@
-export async function processDocument(file) {
+export async function processDocument(file: File) {
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileType = file.name.split('.').pop().toLowerCase();
+    const fileType = file.name.split('.').pop()?.toLowerCase();
     
     // Support both text and markdown files
-    if (!['txt', 'md', 'markdown'].includes(fileType)) {
+    if (!fileType || !['txt', 'md', 'markdown'].includes(fileType)) {
       throw new Error(`Unsupported file type: ${fileType}. Supported types: txt, md, markdown`);
     }
 
@@ -19,6 +19,6 @@ export async function processDocument(file) {
     };
   } catch (error) {
     console.error('Document processing error:', error);
-    throw new Error(`Failed to process document: ${error.message}`);
+    throw new Error(`Failed to process document: ${(error as Error).message}`);
   }
 } 

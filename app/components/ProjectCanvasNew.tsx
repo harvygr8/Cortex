@@ -8,7 +8,18 @@ import ReactFlow, {
   useEdgesState, 
   addEdge,
   ReactFlowProvider,
-  useReactFlow
+  useReactFlow,
+  Node,
+  Edge,
+  NodeChange,
+  EdgeChange,
+  Connection,
+  SelectionMode,
+  BackgroundVariant,
+  NodeDragHandler,
+  NodeMouseHandler,
+  OnSelectionChangeParams,
+  OnNodesDelete
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { toast } from 'react-hot-toast';
@@ -26,6 +37,121 @@ import TasksNode from './TasksNode';
 import ScratchpadNode from './ScratchpadNode';
 import ImageNode from './ImageNode';
 import ContainerNode from './ContainerNode';
+
+// Type definitions
+interface Project {
+  id: string;
+  title: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+  position_x?: number;
+  position_y?: number;
+}
+
+interface ChatCard {
+  id: string;
+  projectId: string;
+  query: string;
+  response: string;
+  sources?: any[];
+  created_at?: string;
+}
+
+interface TasksCard {
+  id: string;
+  projectId: string;
+  title: string;
+  tasks: Task[];
+  created_at?: string;
+}
+
+interface Task {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+interface ScratchpadCard {
+  id: string;
+  projectId: string;
+  text: string;
+  created_at?: string;
+}
+
+interface ImageCard {
+  id: string;
+  projectId: string;
+  imageUrl: string;
+  imageAlt: string;
+  created_at?: string;
+}
+
+interface Container {
+  id: string;
+  projectId: string;
+  label: string;
+  color: string;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+}
+
+interface PageData {
+  projectId: string;
+  title: string;
+  content: string;
+}
+
+interface Page {
+  id: string;
+  projectId: string;
+  title: string;
+  content: string;
+  created_at?: string;
+}
+
+interface ContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  project?: Project;
+  initialQuery?: string;
+  position?: { x: number; y: number };
+}
+
+interface PageModalState {
+  isOpen: boolean;
+  pageId?: string;
+  projectId?: string;
+}
+
+interface ChatContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  chatCard?: ChatCard;
+}
+
+interface TasksContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  tasksCard?: TasksCard;
+}
+
+interface ScratchpadContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  scratchpadCard?: ScratchpadCard;
+}
+
+interface ImageContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  imageCard?: ImageCard;
+}
 
 // Default card and grid settings
 const DEFAULT_CARD_WIDTH = 420;
@@ -45,7 +171,7 @@ const nodeTypes = {
 };
 
 // React Flow wrapper component
-function ProjectCanvasFlow({ projects }) {
+function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   
@@ -59,28 +185,28 @@ function ProjectCanvasFlow({ projects }) {
   const { screenToFlowPosition } = useReactFlow();
   
   // App state
-  const [projectPages, setProjectPages] = useState({});
-  const [contextMenu, setContextMenu] = useState(null);
-  const [chatContextMenu, setChatContextMenu] = useState(null);
-  const [tasksContextMenu, setTasksContextMenu] = useState(null);
-  const [scratchpadContextMenu, setScratchpadContextMenu] = useState(null);
-  const [imageContextMenu, setImageContextMenu] = useState(null);
-  const [paneContextMenu, setPaneContextMenu] = useState(null);
-  const [chatModal, setChatModal] = useState(null);
-  const [addPageModal, setAddPageModal] = useState(null);
-  const [pageModal, setPageModal] = useState(null);
+  const [projectPages, setProjectPages] = useState<Record<string, Page[]>>({});
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [chatContextMenu, setChatContextMenu] = useState<ChatContextMenuState | null>(null);
+  const [tasksContextMenu, setTasksContextMenu] = useState<TasksContextMenuState | null>(null);
+  const [scratchpadContextMenu, setScratchpadContextMenu] = useState<ScratchpadContextMenuState | null>(null);
+  const [imageContextMenu, setImageContextMenu] = useState<ImageContextMenuState | null>(null);
+  const [paneContextMenu, setPaneContextMenu] = useState<ContextMenuState | null>(null);
+  const [chatModal, setChatModal] = useState<ContextMenuState | null>(null);
+  const [addPageModal, setAddPageModal] = useState<{ isOpen: boolean; project?: Project } | null>(null);
+  const [pageModal, setPageModal] = useState<PageModalState | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
-  const [containers, setContainers] = useState([]);
-  const [selectedContainer, setSelectedContainer] = useState(null);
-  const [containerNodeMap, setContainerNodeMap] = useState(new Map());
+  const [containers, setContainers] = useState<Container[]>([]);
+  const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
+  const [containerNodeMap, setContainerNodeMap] = useState<Map<string, string>>(new Map());
   const [isConnecting, setIsConnecting] = useState(false);
   
   // Track positions for debounced saving
-  const savePositionsTimeoutRef = useRef(null);
-  const lastNodesRef = useRef([]);
+  const savePositionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastNodesRef = useRef<any[]>([]);
 
   // Function to save multiple node positions
-  const saveNodePositions = useCallback(async (nodesToSave) => {
+  const saveNodePositions = useCallback(async (nodesToSave: any[]) => {
     const savePromises = [];
     
     for (const node of nodesToSave) {
@@ -140,11 +266,11 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Custom onNodesChange handler with debounced position saving
-  const onNodesChange = useCallback((changes) => {
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
     reactFlowOnNodesChange(changes);
     
     // Check if any changes involve position updates
-    const hasPositionChanges = changes.some(change => 
+    const hasPositionChanges = changes.some((change: NodeChange) => 
       change.type === 'position' && change.position
     );
     
@@ -186,11 +312,12 @@ function ProjectCanvasFlow({ projects }) {
   }, [reactFlowOnNodesChange, saveNodePositions]);
 
   // Context menu handlers - define early to avoid hoisting issues
-  const handleContextMenu = useCallback((e, project) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, project: Project) => {
     e.preventDefault();
     e.stopPropagation();
     
     setContextMenu({
+      isOpen: true,
       x: e.clientX,
       y: e.clientY,
       project: project
@@ -206,13 +333,14 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Pane context menu handler (right-click on empty canvas)
-  const handlePaneContextMenu = useCallback((event) => {
+  const handlePaneContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
     const flowPosition = screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,
     });
     setPaneContextMenu({
+      isOpen: true,
       x: event.clientX,
       y: event.clientY,
       position: flowPosition
@@ -220,12 +348,13 @@ function ProjectCanvasFlow({ projects }) {
   }, [screenToFlowPosition]);
 
   // Chat context menu handlers
-  const handleChatContextMenu = useCallback((e, chatCard) => {
+  const handleChatContextMenu = useCallback((e: React.MouseEvent, chatCard: ChatCard) => {
     console.log('handleChatContextMenu called', { e, chatCard });
     e.preventDefault();
     e.stopPropagation();
     
     setChatContextMenu({
+      isOpen: true,
       x: e.clientX,
       y: e.clientY,
       chatCard: chatCard
@@ -237,12 +366,13 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Tasks context menu handlers
-  const handleTasksContextMenu = useCallback((e, tasksCard) => {
+  const handleTasksContextMenu = useCallback((e: React.MouseEvent, tasksCard: TasksCard) => {
     console.log('handleTasksContextMenu called', { e, tasksCard });
     e.preventDefault();
     e.stopPropagation();
     
     setTasksContextMenu({
+      isOpen: true,
       x: e.clientX,
       y: e.clientY,
       tasksCard: tasksCard
@@ -254,12 +384,13 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Scratchpad context menu handlers
-  const handleScratchpadContextMenu = useCallback((e, scratchpadCard) => {
+  const handleScratchpadContextMenu = useCallback((e: React.MouseEvent, scratchpadCard: ScratchpadCard) => {
     console.log('handleScratchpadContextMenu called', { e, scratchpadCard });
     e.preventDefault();
     e.stopPropagation();
     
     setScratchpadContextMenu({
+      isOpen: true,
       x: e.clientX,
       y: e.clientY,
       scratchpadCard: scratchpadCard
@@ -271,12 +402,13 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Image context menu handlers
-  const handleImageContextMenu = useCallback((e, imageCard) => {
+  const handleImageContextMenu = useCallback((e: React.MouseEvent, imageCard: ImageCard) => {
     console.log('handleImageContextMenu called', { e, imageCard });
     e.preventDefault();
     e.stopPropagation();
     
     setImageContextMenu({
+      isOpen: true,
       x: e.clientX,
       y: e.clientY,
       imageCard: imageCard
@@ -287,10 +419,12 @@ function ProjectCanvasFlow({ projects }) {
     setImageContextMenu(null);
   }, []);
 
-  const handleChatWithProject = useCallback((project) => {
+  const handleChatWithProject = useCallback((project: Project) => {
     setChatModal({
-      project: project,
-      isOpen: true
+      isOpen: true,
+      x: 0,
+      y: 0,
+      project: project
     });
   }, []);
 
@@ -298,7 +432,7 @@ function ProjectCanvasFlow({ projects }) {
     setChatModal(null);
   }, []);
 
-  const handleAddPage = useCallback((project) => {
+  const handleAddPage = useCallback((project: Project) => {
     setAddPageModal({
       project: project,
       isOpen: true
@@ -309,7 +443,7 @@ function ProjectCanvasFlow({ projects }) {
     setAddPageModal(null);
   }, []);
 
-  const handleOpenPageModal = useCallback((pageId, projectId) => {
+  const handleOpenPageModal = useCallback((pageId: string, projectId: string) => {
     setPageModal({
       pageId,
       projectId,
@@ -321,7 +455,7 @@ function ProjectCanvasFlow({ projects }) {
     setPageModal(null);
   }, []);
 
-  const handlePageClick = useCallback((pageId, action, project) => {
+  const handlePageClick = useCallback((pageId: string, action: string, project: Project) => {
     if (action === 'view-page' && pageId) {
       handleOpenPageModal(pageId, project.id);
     } else if (action === 'add-page') {
@@ -333,7 +467,7 @@ function ProjectCanvasFlow({ projects }) {
     }
   }, [handleOpenPageModal, handleAddPage]);
 
-  const handleCreatePage = useCallback(async (pageData) => {
+  const handleCreatePage = useCallback(async (pageData: PageData) => {
     try {
       const response = await fetch(`/api/projects/${pageData.projectId}/pages`, {
         method: 'POST',
@@ -368,15 +502,16 @@ function ProjectCanvasFlow({ projects }) {
     }
   }, [setProjectPages]);
 
-  const handleImportData = useCallback((project) => {
+  const handleImportData = useCallback((project: Project) => {
     // Create a temporary file input and trigger it
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = '.txt,.md,.markdown';
     fileInput.style.display = 'none';
     
-    fileInput.onchange = async (event) => {
-      const file = event.target.files[0];
+    fileInput.onchange = async (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
       if (!file) return;
 
       const formData = new FormData();
@@ -416,7 +551,7 @@ function ProjectCanvasFlow({ projects }) {
     fileInput.click();
   }, [setProjectPages]);
 
-  const handleRegenerateVectors = useCallback(async (project) => {
+  const handleRegenerateVectors = useCallback(async (project: Project) => {
     try {
       const response = await fetch(`/api/projects/${project.id}/regenerate-vectors`, {
         method: 'POST',
@@ -437,7 +572,7 @@ function ProjectCanvasFlow({ projects }) {
     }
   }, []);
 
-  const handleDeleteProject = useCallback(async (project) => {
+  const handleDeleteProject = useCallback(async (project: Project) => {
     if (!confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
       return;
     }
@@ -480,7 +615,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [setNodes, setEdges]);
 
   // Chat context menu action handlers
-  const handleCopyResponse = useCallback((chatCard) => {
+  const handleCopyResponse = useCallback((chatCard: ChatCard) => {
     navigator.clipboard.writeText(chatCard.response).then(() => {
       toast.success('Response copied to clipboard!');
     }).catch(err => {
@@ -490,7 +625,7 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
 
-  const handleExportToFile = useCallback((chatCard) => {
+  const handleExportToFile = useCallback((chatCard: ChatCard) => {
     const content = `# Chat Response\n\n## Query:\n${chatCard.query}\n\n## Response:\n${chatCard.response}\n\n---\nExported from Cortex on ${new Date().toLocaleDateString()}`;
     const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
@@ -503,12 +638,12 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Tasks context menu action handlers
-  const handleExportTasks = useCallback((tasksCard) => {
+  const handleExportTasks = useCallback((tasksCard: TasksCard) => {
     const tasks = tasksCard.tasks || [];
-    const completedTasks = tasks.filter(t => t.completed);
-    const pendingTasks = tasks.filter(t => !t.completed);
+    const completedTasks = tasks.filter((t: Task) => t.completed);
+    const pendingTasks = tasks.filter((t: Task) => !t.completed);
     
-    const content = `# Task List\n\n## Summary\n- Total tasks: ${tasks.length}\n- Completed: ${completedTasks.length}\n- Pending: ${pendingTasks.length}\n- Progress: ${Math.round((completedTasks.length / tasks.length) * 100)}%\n\n## Completed Tasks\n${completedTasks.map(t => `- [x] ${t.text}`).join('\n')}\n\n## Pending Tasks\n${pendingTasks.map(t => `- [ ] ${t.text}`).join('\n')}\n\n---\nExported from Cortex on ${new Date().toLocaleDateString()}`;
+    const content = `# Task List\n\n## Summary\n- Total tasks: ${tasks.length}\n- Completed: ${completedTasks.length}\n- Pending: ${pendingTasks.length}\n- Progress: ${Math.round((completedTasks.length / tasks.length) * 100)}%\n\n## Completed Tasks\n${completedTasks.map((t: Task) => `- [x] ${t.text}`).join('\n')}\n\n## Pending Tasks\n${pendingTasks.map((t: Task) => `- [ ] ${t.text}`).join('\n')}\n\n---\nExported from Cortex on ${new Date().toLocaleDateString()}`;
     
     const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
@@ -521,7 +656,7 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Detach node from project
-  const handleDetachNode = useCallback((nodeId, nodeType) => {
+  const handleDetachNode = useCallback((nodeId: string, nodeType: string) => {
     console.log(`[ProjectCanvas] Detaching ${nodeType} node ${nodeId} from project`);
     
     // Remove edges connected to this node
@@ -541,7 +676,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [setEdges]);
 
   // Delete chat node
-  const deleteChatNode = useCallback(async (chatNodeId) => {
+  const deleteChatNode = useCallback(async (chatNodeId: string) => {
     // Get current nodes to find project info
     let projectId = null;
     setNodes(prev => {
@@ -567,7 +702,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [setNodes, setEdges]);
 
   // Delete task node
-  const deleteTaskNode = useCallback(async (taskNodeId) => {
+  const deleteTaskNode = useCallback(async (taskNodeId: string) => {
     // Get current nodes to find project info
     let projectId = null;
     setNodes(prev => {
@@ -593,7 +728,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [setNodes, setEdges]);
 
   // Delete scratchpad node
-  const deleteScratchpadNode = useCallback(async (scratchpadNodeId) => {
+  const deleteScratchpadNode = useCallback(async (scratchpadNodeId: string) => {
     // Get current nodes to find project info
     let projectId = null;
     setNodes(prev => {
@@ -619,7 +754,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [setNodes, setEdges]);
 
   // Delete image node
-  const deleteImageNode = useCallback(async (imageNodeId) => {
+  const deleteImageNode = useCallback(async (imageNodeId: string) => {
     // Get current nodes to find project info
     let projectId = null;
     setNodes(prev => {
@@ -649,7 +784,7 @@ function ProjectCanvasFlow({ projects }) {
     const fetchAllProjectPages = async () => {
       if (hasInitialized && Object.keys(projectPages).length > 0) return;
       
-      const pagesData = {};
+      const pagesData: Record<string, Page[]> = {};
       
       await Promise.all(
         projects.map(async (project) => {
@@ -685,13 +820,13 @@ function ProjectCanvasFlow({ projects }) {
       }
       
       console.log('[ProjectCanvas] Loading persisted data for', projects.length, 'projects');
-      const chatNodes = [];
-      const taskNodes = [];
-      const scratchpadNodes = [];
-      const imageNodes = [];
-      const containerNodes = [];
-      const projectNodes = [];
-      const edges = [];
+      const chatNodes: Node[] = [];
+      const taskNodes: Node[] = [];
+      const scratchpadNodes: Node[] = [];
+      const imageNodes: Node[] = [];
+      const containerNodes: Node[] = [];
+      const projectNodes: Node[] = [];
+      const edges: Edge[] = [];
       
       // Projects already contain position data, no need to fetch separately
       
@@ -702,7 +837,7 @@ function ProjectCanvasFlow({ projects }) {
           if (chatResponse.ok) {
             const chatMessages = await chatResponse.json();
             
-            chatMessages.forEach(message => {
+            chatMessages.forEach((message: any) => {
               const chatNodeId = message.id;
               const chatNode = {
                 id: chatNodeId,
@@ -790,7 +925,7 @@ function ProjectCanvasFlow({ projects }) {
           if (taskResponse.ok) {
             const taskLists = await taskResponse.json();
             
-            taskLists.forEach(taskList => {
+            taskLists.forEach((taskList: any) => {
               const taskNodeId = taskList.id;
               const taskNode = {
                 id: taskNodeId,
@@ -876,7 +1011,7 @@ function ProjectCanvasFlow({ projects }) {
           if (scratchpadResponse.ok) {
             const scratchpads = await scratchpadResponse.json();
             
-            scratchpads.forEach(scratchpad => {
+            scratchpads.forEach((scratchpad: any) => {
               const scratchpadNodeId = scratchpad.id;
               const scratchpadNode = {
                 id: scratchpadNodeId,
@@ -962,7 +1097,7 @@ function ProjectCanvasFlow({ projects }) {
           if (imageResponse.ok) {
             const images = await imageResponse.json();
             
-            images.forEach(image => {
+            images.forEach((image: any) => {
               const imageNodeId = image.id;
               const imageNode = {
                 id: imageNodeId,
@@ -1049,7 +1184,7 @@ function ProjectCanvasFlow({ projects }) {
           if (containerResponse.ok) {
             const containers = await containerResponse.json();
             
-            containers.forEach(container => {
+            containers.forEach((container: any) => {
               const containerNode = {
                 id: `container-${container.id}`,
                 type: 'containerNode',
@@ -1099,7 +1234,7 @@ function ProjectCanvasFlow({ projects }) {
         const savedX = project.position_x;
         const savedY = project.position_y;
         
-        if (savedX !== null && savedY !== null && !isNaN(savedX) && !isNaN(savedY)) {
+        if (savedX !== null && savedX !== undefined && savedY !== null && savedY !== undefined && !isNaN(savedX) && !isNaN(savedY)) {
           position = { x: Number(savedX), y: Number(savedY) };
           console.log(`[ProjectCanvas] Loaded saved position for project ${project.id}:`, position);
         } else {
@@ -1120,7 +1255,7 @@ function ProjectCanvasFlow({ projects }) {
             project,
             pages: projectPages[project.id] || [],
             onContextMenu: handleContextMenu,
-            onPageClick: (pageId, action) => handlePageClick(pageId, action, project),
+            onPageClick: (pageId: string, action: string) => handlePageClick(pageId, action, project),
             isConnecting
           },
           style: { 
@@ -1192,7 +1327,7 @@ function ProjectCanvasFlow({ projects }) {
             data: {
               ...node.data,
               onContextMenu: handleContextMenu,
-              onPageClick: (pageId, action) => handlePageClick(pageId, action, node.data.project),
+              onPageClick: (pageId: string, action: string) => handlePageClick(pageId, action, node.data.project),
               isConnecting
             }
           };
@@ -1221,9 +1356,10 @@ function ProjectCanvasFlow({ projects }) {
 
   // Global click handler to close all context menus
   useEffect(() => {
-    const handleGlobalClick = (event) => {
+    const handleGlobalClick = (event: MouseEvent) => {
       // Only close context menus if clicking outside of them
-      const isContextMenuClick = event.target.closest('[data-context-menu]');
+      const target = event.target as Element;
+      const isContextMenuClick = target.closest('[data-context-menu]');
       if (!isContextMenuClick) {
         setContextMenu(null);
         setChatContextMenu(null);
@@ -1241,7 +1377,7 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Find empty position for new chat nodes - dynamic placement in all directions
-  const findEmptyPosition = useCallback((sourceNodeId) => {
+  const findEmptyPosition = useCallback((sourceNodeId: string) => {
     const sourceNode = nodes.find(n => n.id === sourceNodeId);
     if (!sourceNode) return { x: 500, y: 0 };
 
@@ -1322,7 +1458,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [nodes]);
 
   // Chat submission handler
-  const handleChatSubmit = useCallback(async (query) => {
+  const handleChatSubmit = useCallback(async (query: string) => {
     if (!chatModal?.project) return;
 
     try {
@@ -1449,12 +1585,12 @@ function ProjectCanvasFlow({ projects }) {
   }, [chatModal, findEmptyPosition, isDarkMode]);
 
   // Create task node
-  const createTaskNode = useCallback(async (sourceProjectId) => {
+  const createTaskNode = useCallback(async (sourceProjectId: string) => {
     const sourceNodeId = `project-${sourceProjectId}`;
     
     // Get current nodes to find empty position
     const getCurrentNodes = () => {
-      let currentNodes = [];
+      let currentNodes: Node[] = [];
       setNodes(prev => {
         currentNodes = prev;
         return prev;
@@ -1462,7 +1598,7 @@ function ProjectCanvasFlow({ projects }) {
       return currentNodes;
     };
     
-    const currentNodes = getCurrentNodes();
+    const currentNodes: Node[] = getCurrentNodes();
     const sourceNode = currentNodes.find(n => n.id === sourceNodeId);
     
     // Use the same dynamic positioning logic as chat nodes
@@ -1637,12 +1773,12 @@ function ProjectCanvasFlow({ projects }) {
   }, [isDarkMode, handleTasksContextMenu, setNodes, setEdges]);
 
   // Create scratchpad node
-  const createScratchpadNode = useCallback(async (sourceProjectId) => {
+  const createScratchpadNode = useCallback(async (sourceProjectId: string) => {
     const sourceNodeId = `project-${sourceProjectId}`;
     
     // Get current nodes to find empty position
     const getCurrentNodes = () => {
-      let currentNodes = [];
+      let currentNodes: Node[] = [];
       setNodes(prev => {
         currentNodes = prev;
         return prev;
@@ -1650,7 +1786,7 @@ function ProjectCanvasFlow({ projects }) {
       return currentNodes;
     };
     
-    const currentNodes = getCurrentNodes();
+    const currentNodes: Node[] = getCurrentNodes();
     const sourceNode = currentNodes.find(n => n.id === sourceNodeId);
     
     // Use the same dynamic positioning logic as other nodes
@@ -1826,12 +1962,12 @@ function ProjectCanvasFlow({ projects }) {
   }, [isDarkMode, handleScratchpadContextMenu, setNodes, setEdges]);
 
   // Create image node
-  const createImageNode = useCallback(async (sourceProjectId) => {
+  const createImageNode = useCallback(async (sourceProjectId: string) => {
     const sourceNodeId = `project-${sourceProjectId}`;
     
     // Get current nodes to find empty position
     const getCurrentNodes = () => {
-      let currentNodes = [];
+      let currentNodes: Node[] = [];
       setNodes(prev => {
         currentNodes = prev;
         return prev;
@@ -1839,7 +1975,7 @@ function ProjectCanvasFlow({ projects }) {
       return currentNodes;
     };
     
-    const currentNodes = getCurrentNodes();
+    const currentNodes: Node[] = getCurrentNodes();
     const sourceNode = currentNodes.find(n => n.id === sourceNodeId);
     
     // Use the same dynamic positioning logic as other nodes
@@ -2017,7 +2153,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [isDarkMode, handleImageContextMenu, setNodes, setEdges]);
 
   // Container manipulation functions
-  const updateContainerLabel = useCallback(async (containerId, newLabel) => {
+  const updateContainerLabel = useCallback(async (containerId: string, newLabel: string) => {
     console.log('ProjectCanvasNew: updateContainerLabel called with:', containerId, newLabel);
     
     // Get current nodes from state instead of closure
@@ -2072,7 +2208,7 @@ function ProjectCanvasFlow({ projects }) {
     });
   }, [setNodes]);
 
-  const updateContainerColor = useCallback(async (containerId, newColor) => {
+  const updateContainerColor = useCallback(async (containerId: string, newColor: string) => {
     console.log('ProjectCanvasNew: updateContainerColor called with:', containerId, newColor);
     console.log('ProjectCanvasNew: updateContainerColor function started');
     
@@ -2131,7 +2267,7 @@ function ProjectCanvasFlow({ projects }) {
     });
   }, [setNodes]);
 
-  const updateContainerSize = useCallback(async (containerId, newWidth, newHeight) => {
+  const updateContainerSize = useCallback(async (containerId: string, newWidth: number, newHeight: number) => {
     console.log('updateContainerSize called:', containerId, newWidth, newHeight);
     try {
       const containerNodeId = `container-${containerId}`;
@@ -2176,7 +2312,7 @@ function ProjectCanvasFlow({ projects }) {
     }
   }, [nodes, setNodes]);
 
-  const startContainerResize = useCallback((containerId) => {
+  const startContainerResize = useCallback((containerId: string) => {
     // Mark this container as resizing to disable heavy drag grouping work
     setNodes(prev => prev.map(node => {
       if (node.id === `container-${containerId}`) {
@@ -2186,7 +2322,7 @@ function ProjectCanvasFlow({ projects }) {
     }));
   }, [setNodes]);
 
-  const endContainerResize = useCallback((containerId) => {
+  const endContainerResize = useCallback((containerId: string) => {
     // Unmark resizing flag after resize completes
     setNodes(prev => prev.map(node => {
       if (node.id === `container-${containerId}`) {
@@ -2196,7 +2332,7 @@ function ProjectCanvasFlow({ projects }) {
     }));
   }, [setNodes]);
 
-  const deleteContainer = useCallback(async (containerId) => {
+  const deleteContainer = useCallback(async (containerId: string) => {
     console.log('ProjectCanvasNew: deleteContainer called with:', containerId);
     console.log('ProjectCanvasNew: deleteContainer function started at:', new Date().toISOString());
     
@@ -2244,7 +2380,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [setNodes]);
 
   // Create container
-  const createContainer = useCallback(async (position) => {
+  const createContainer = useCallback(async (position: { x: number; y: number }) => {
     try {
       // Use the first project from the current projects list
       if (!projects || projects.length === 0) {
@@ -2322,7 +2458,7 @@ function ProjectCanvasFlow({ projects }) {
 
 
   // Helper function to check if a child node is already connected to a project
-  const isChildNodeAlreadyConnected = useCallback((targetNodeId) => {
+  const isChildNodeAlreadyConnected = useCallback((targetNodeId: string) => {
     return edges.some(edge => {
       const targetNode = nodes.find(n => n.id === edge.target);
       const sourceNode = nodes.find(n => n.id === edge.source);
@@ -2333,7 +2469,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [edges, nodes]);
 
   // Edge connection handler - handles manual reconnections
-  const onConnect = useCallback((params) => {
+  const onConnect = useCallback((params: Connection) => {
     console.log('[ProjectCanvas] New connection created:', params);
     
     // Find source and target nodes
@@ -2342,7 +2478,7 @@ function ProjectCanvasFlow({ projects }) {
     
     // Check if trying to connect from a project node to a child node that's already connected
     if (sourceNode?.type === 'projectNode' && targetNode && (targetNode.type === 'chatNode' || targetNode.type === 'tasksNode' || targetNode.type === 'scratchpadNode' || targetNode.type === 'imageNode')) {
-      if (isChildNodeAlreadyConnected(params.target)) {
+      if (params.target && isChildNodeAlreadyConnected(params.target)) {
         console.log('[ProjectCanvas] Connection blocked: Child node already connected to a project');
         toast.error('This node already has a connection to a project');
         return; // Prevent the connection
@@ -2375,7 +2511,7 @@ function ProjectCanvasFlow({ projects }) {
         const isProjectTransfer = oldProjectId !== newProjectId;
         
         // Update chat node's project relationship
-        const updateData = {
+        const updateData: any = {
           sourceHandle: params.sourceHandle,
           targetHandle: params.targetHandle
         };
@@ -2385,7 +2521,7 @@ function ProjectCanvasFlow({ projects }) {
           console.log(`[ProjectCanvas] Transferring chat node ${targetNode.id} from project ${oldProjectId} to ${newProjectId}`);
         }
         
-        fetch(`/api/projects/${oldProjectId}/chat-messages/${targetNode.id}`, {
+        fetch(`/api/projects/${oldProjectId!}/chat-messages/${targetNode.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData),
@@ -2417,7 +2553,7 @@ function ProjectCanvasFlow({ projects }) {
         const isProjectTransfer = oldProjectId !== newProjectId;
         
         // Update task node's project relationship
-        const updateData = {
+        const updateData: any = {
           sourceHandle: params.sourceHandle,
           targetHandle: params.targetHandle
         };
@@ -2459,7 +2595,7 @@ function ProjectCanvasFlow({ projects }) {
         const isProjectTransfer = oldProjectId !== newProjectId;
         
         // Update scratchpad node's project relationship
-        const updateData = {
+        const updateData: any = {
           sourceHandle: params.sourceHandle,
           targetHandle: params.targetHandle
         };
@@ -2501,7 +2637,7 @@ function ProjectCanvasFlow({ projects }) {
         const isProjectTransfer = oldProjectId !== newProjectId;
         
         // Update image node's project relationship
-        const updateData = {
+        const updateData: any = {
           sourceHandle: params.sourceHandle,
           targetHandle: params.targetHandle
         };
@@ -2566,15 +2702,15 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Handle selection events
-  const onSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }) => {
-    console.log('Selected nodes:', selectedNodes.map(n => n.id));
-    console.log('Selected edges:', selectedEdges.map(e => e.id));
+  const onSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }: OnSelectionChangeParams) => {
+    console.log('Selected nodes:', selectedNodes.map((n: Node) => n.id));
+    console.log('Selected edges:', selectedEdges.map((e: Edge) => e.id));
   }, []);
 
   // Handle key press events for multi-selection and deletion
-  const onNodesDelete = useCallback((deletedNodes) => {
+  const onNodesDelete = useCallback((deletedNodes: Node[]) => {
     // Handle deletion of multiple nodes
-    const deletedNodeIds = deletedNodes.map(node => node.id);
+    const deletedNodeIds = deletedNodes.map((node: Node) => node.id);
     console.log('Deleting nodes:', deletedNodeIds);
     
     // Remove associated edges
@@ -2584,7 +2720,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [setEdges]);
 
   // Handle React Flow node context menu
-  const onNodeContextMenu = useCallback((event, node) => {
+  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     console.log('React Flow node context menu', { event, node });
     event.preventDefault();
     
@@ -2602,16 +2738,16 @@ function ProjectCanvasFlow({ projects }) {
   }, [handleChatContextMenu, handleTasksContextMenu, handleContextMenu]);
 
   // Helper function to check if a node is inside a container
-  const isNodeInsideContainer = useCallback((node, container) => {
+  const isNodeInsideContainer = useCallback((node: Node, container: Node) => {
     const nodeX = node.position.x;
     const nodeY = node.position.y;
-    const nodeWidth = node.style?.width || DEFAULT_CARD_WIDTH;
-    const nodeHeight = node.style?.height || DEFAULT_CARD_HEIGHT;
+    const nodeWidth = typeof node.style?.width === 'number' ? node.style.width : DEFAULT_CARD_WIDTH;
+    const nodeHeight = typeof node.style?.height === 'number' ? node.style.height : DEFAULT_CARD_HEIGHT;
     
     const containerX = container.position.x;
     const containerY = container.position.y;
-    const containerWidth = container.style?.width || 300;
-    const containerHeight = container.style?.height || 200;
+    const containerWidth = typeof container.style?.width === 'number' ? container.style.width : 300;
+    const containerHeight = typeof container.style?.height === 'number' ? container.style.height : 200;
     
     // Check if node center is inside container bounds
     const nodeCenterX = nodeX + nodeWidth / 2;
@@ -2624,7 +2760,7 @@ function ProjectCanvasFlow({ projects }) {
   }, []);
 
   // Handle node drag start to track containers
-  const onNodeDragStart = useCallback((event, node) => {
+  const onNodeDragStart = useCallback((event: React.MouseEvent, node: Node) => {
     if (node.type === 'containerNode') {
       // Find all nodes inside this container
       const nodesInside = nodes.filter(n => 
@@ -2651,7 +2787,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [nodes, isNodeInsideContainer]);
 
   // Handle container drag to move contained nodes
-  const onNodeDrag = useCallback((event, node) => {
+  const onNodeDrag = useCallback((event: React.MouseEvent, node: Node) => {
     if (node.type === 'containerNode' && node.data.dragState && !node.data.isResizing) {
       const { nodesInside, offsets } = node.data.dragState;
       
@@ -2675,7 +2811,7 @@ function ProjectCanvasFlow({ projects }) {
   }, [setNodes]);
 
   // Handle node drag end to save positions
-  const onNodeDragStop = useCallback(async (event, node) => {
+  const onNodeDragStop = useCallback(async (event: React.MouseEvent, node: Node) => {
     if (node.type === 'chatNode' && node.data.chatCard) {
       try {
         await fetch(`/api/projects/${node.data.chatCard.projectId}/chat-messages/${node.id}`, {
@@ -2834,11 +2970,11 @@ function ProjectCanvasFlow({ projects }) {
         panOnDrag={[1, 2]}
         panActivationKeyCode={['Space', panKey]}
         selectNodesOnDrag={false}
-        selectionMode="partial"
+        selectionMode={SelectionMode.Partial}
         selectionKeyCode={null}
       >
         <Background 
-          variant="dots" 
+          variant={BackgroundVariant.Dots} 
           gap={25} 
           size={2}
           color={isDarkMode ? '#374151' : '#9ca3af'}
@@ -2852,17 +2988,17 @@ function ProjectCanvasFlow({ projects }) {
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={handleCloseContextMenu}
-          onChat={() => handleChatWithProject(contextMenu.project)}
-          onCreateTasks={() => createTaskNode(contextMenu.project.id)}
-          onCreateScratchpad={() => createScratchpadNode(contextMenu.project.id)}
-          onCreateImage={() => createImageNode(contextMenu.project.id)}
-          onAddPage={() => handleAddPage(contextMenu.project)}
-          onImportData={() => handleImportData(contextMenu.project)}
-          onRegenerateVectors={() => handleRegenerateVectors(contextMenu.project)}
+          onChat={() => contextMenu.project ? handleChatWithProject(contextMenu.project) : undefined}
+          onCreateTasks={() => contextMenu.project && createTaskNode(contextMenu.project.id)}
+          onCreateScratchpad={() => contextMenu.project && createScratchpadNode(contextMenu.project.id)}
+          onCreateImage={() => contextMenu.project && createImageNode(contextMenu.project.id)}
+          onAddPage={() => contextMenu.project && handleAddPage(contextMenu.project)}
+          onImportData={() => contextMenu.project ? handleImportData(contextMenu.project) : undefined}
+          onRegenerateVectors={() => contextMenu.project && handleRegenerateVectors(contextMenu.project)}
           onEdit={() => {
-            window.location.href = `/projects/${contextMenu.project.id}`;
+            contextMenu.project && (window.location.href = `/projects/${contextMenu.project.id}`);
           }}
-          onDelete={() => handleDeleteProject(contextMenu.project)}
+          onDelete={() => contextMenu.project && handleDeleteProject(contextMenu.project)}
         />
       )}
 
@@ -2878,7 +3014,7 @@ function ProjectCanvasFlow({ projects }) {
           <button
             onClick={() => {
               // Use the exact click position (already converted to flow coordinates)
-              createContainer(paneContextMenu.position);
+              paneContextMenu.position && createContainer(paneContextMenu.position);
               handleClosePaneContextMenu();
             }}
             className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors cursor-pointer`}
@@ -2895,10 +3031,10 @@ function ProjectCanvasFlow({ projects }) {
           x={chatContextMenu.x}
           y={chatContextMenu.y}
           onClose={handleCloseChatContextMenu}
-          onDelete={() => deleteChatNode(chatContextMenu.chatCard.id)}
-          onCopyResponse={() => handleCopyResponse(chatContextMenu.chatCard)}
-          onExportToFile={() => handleExportToFile(chatContextMenu.chatCard)}
-          onDetach={() => handleDetachNode(chatContextMenu.chatCard.id, 'chatNode')}
+          onDelete={() => chatContextMenu.chatCard && deleteChatNode(chatContextMenu.chatCard.id)}
+          onCopyResponse={() => chatContextMenu.chatCard && handleCopyResponse(chatContextMenu.chatCard)}
+          onExportToFile={() => chatContextMenu.chatCard && handleExportToFile(chatContextMenu.chatCard)}
+          onDetach={() => chatContextMenu.chatCard && handleDetachNode(chatContextMenu.chatCard.id, 'chatNode')}
         />
       )}
 
@@ -2908,9 +3044,9 @@ function ProjectCanvasFlow({ projects }) {
           x={tasksContextMenu.x}
           y={tasksContextMenu.y}
           onClose={handleCloseTasksContextMenu}
-          onDelete={() => deleteTaskNode(tasksContextMenu.tasksCard.id)}
-          onExportTasks={() => handleExportTasks(tasksContextMenu.tasksCard)}
-          onDetach={() => handleDetachNode(tasksContextMenu.tasksCard.id, 'tasksNode')}
+          onDelete={() => tasksContextMenu.tasksCard && deleteTaskNode(tasksContextMenu.tasksCard.id)}
+          onExportTasks={() => tasksContextMenu.tasksCard && handleExportTasks(tasksContextMenu.tasksCard)}
+          onDetach={() => tasksContextMenu.tasksCard && handleDetachNode(tasksContextMenu.tasksCard.id, 'tasksNode')}
         />
       )}
 
@@ -2925,7 +3061,7 @@ function ProjectCanvasFlow({ projects }) {
         >
           <button
             onClick={() => {
-              deleteScratchpadNode(scratchpadContextMenu.scratchpadCard.id);
+              scratchpadContextMenu.scratchpadCard && deleteScratchpadNode(scratchpadContextMenu.scratchpadCard.id);
               handleCloseScratchpadContextMenu();
             }}
             className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors text-red-500`}
@@ -2934,7 +3070,7 @@ function ProjectCanvasFlow({ projects }) {
           </button>
           <button
             onClick={() => {
-              handleDetachNode(scratchpadContextMenu.scratchpadCard.id, 'scratchpadNode');
+              scratchpadContextMenu.scratchpadCard && handleDetachNode(scratchpadContextMenu.scratchpadCard.id, 'scratchpadNode');
               handleCloseScratchpadContextMenu();
             }}
             className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors ${theme.text}`}
@@ -2955,7 +3091,7 @@ function ProjectCanvasFlow({ projects }) {
         >
           <button
             onClick={() => {
-              deleteImageNode(imageContextMenu.imageCard.id);
+              imageContextMenu.imageCard && deleteImageNode(imageContextMenu.imageCard.id);
               handleCloseImageContextMenu();
             }}
             className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors text-red-500`}
@@ -2964,7 +3100,7 @@ function ProjectCanvasFlow({ projects }) {
           </button>
           <button
             onClick={() => {
-              handleDetachNode(imageContextMenu.imageCard.id, 'imageNode');
+              imageContextMenu.imageCard && handleDetachNode(imageContextMenu.imageCard.id, 'imageNode');
               handleCloseImageContextMenu();
             }}
             className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors ${theme.text}`}
@@ -2980,7 +3116,7 @@ function ProjectCanvasFlow({ projects }) {
           isOpen={chatModal.isOpen}
           onClose={handleCloseChatModal}
           onSubmit={handleChatSubmit}
-          projectTitle={chatModal.project.title}
+          projectTitle={chatModal.project?.title || ''}
           initialQuery={chatModal.initialQuery}
         />
       )}
@@ -2996,7 +3132,7 @@ function ProjectCanvasFlow({ projects }) {
       )}
 
       {/* Page Modal */}
-      {pageModal && (
+      {pageModal && pageModal.pageId && pageModal.projectId && (
         <PageModal
           isOpen={pageModal.isOpen}
           onClose={handleClosePageModal}
@@ -3011,7 +3147,7 @@ function ProjectCanvasFlow({ projects }) {
                   const pagesData = await response.json();
                   setProjectPages(prev => ({
                     ...prev,
-                    [pageModal.projectId]: pagesData
+                    [pageModal.projectId!]: pagesData
                   }));
                 }
               } catch (error) {
@@ -3028,7 +3164,7 @@ function ProjectCanvasFlow({ projects }) {
 }
 
 // Main exported component with ReactFlowProvider
-export default function ProjectCanvas({ projects }) {
+export default function ProjectCanvas({ projects }: { projects: Project[] }) {
   return (
     <ReactFlowProvider>
       <ProjectCanvasFlow projects={projects} />

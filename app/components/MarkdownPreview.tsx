@@ -1,9 +1,17 @@
 'use client';
+import React from 'react';
 
 import { useState, useEffect } from 'react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function MarkdownPreview({ content, isEditing, onSave, onCancel }) {
+interface MarkdownPreviewProps {
+  content: string;
+  isEditing: boolean;
+  onSave: (content: string) => void;
+  onCancel: () => void;
+}
+
+export default function MarkdownPreview({ content, isEditing, onSave, onCancel }: MarkdownPreviewProps) {
   const [editedContent, setEditedContent] = useState(content);
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
@@ -21,7 +29,7 @@ export default function MarkdownPreview({ content, isEditing, onSave, onCancel }
     onCancel();
   };
 
-  const parseMarkdown = (text) => {
+  const parseMarkdown = (text: string) => {
     if (!text) return '';
     
     return text
@@ -41,11 +49,11 @@ export default function MarkdownPreview({ content, isEditing, onSave, onCancel }
       // Lists
       .replace(/^\* (.*$)/gim, '<li class="ml-4">$1</li>')
       .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
-      .replace(/(<li.*<\/li>)/s, '<ul class="list-disc my-2">$1</ul>')
+      .replace(/(<li.*<\/li>)/g, '<ul class="list-disc my-2">$1</ul>')
       
       // Numbered lists
       .replace(/^\d+\. (.*$)/gim, '<li class="ml-4">$1</li>')
-      .replace(/(<li.*<\/li>)/s, '<ol class="list-decimal my-2">$1</ol>')
+      .replace(/(<li.*<\/li>)/g, '<ol class="list-decimal my-2">$1</ol>')
       
       // Links
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')

@@ -8,7 +8,7 @@ let contextAgent: ContextAgent | null = null;
 const initializeAgent = async (): Promise<ContextAgent> => {
   if (!contextAgent) {
     if (!await ollamaStatus.checkStatus()) {
-      await ollamaStatus.start();
+      throw new Error('Ollama server is not running. Please start Ollama first.');
     }
     contextAgent = await ContextAgent.initialize();
   }
@@ -89,4 +89,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

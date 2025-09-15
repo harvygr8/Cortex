@@ -3,6 +3,8 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ChatOllama } from "@langchain/community/chat_models/ollama";
 
 export class GuardRailNode {
+  private chain: any;
+  
   constructor() {
     const model = new ChatOllama({
       baseUrl: "http://localhost:11434",
@@ -38,7 +40,7 @@ export class GuardRailNode {
     ]);
   }
 
-  async invoke(input) {
+  async invoke(input: any) {
     try {
       const result = await this.chain.invoke({
         question: input.question
@@ -87,6 +89,8 @@ export class GuardRailNode {
 }
 
 export class ResponseNode {
+  private chain: any;
+  
   constructor() {
     const model = new ChatOllama({
       baseUrl: "http://localhost:11434",
@@ -187,7 +191,7 @@ export class ResponseNode {
     ]);
   }
 
-  async invoke(input) {
+  async invoke(input: any) {
     try {
       console.log('[ResponseNode] Processing input:', input);
       const result = await this.chain.invoke({
@@ -222,9 +226,9 @@ export class ResponseNode {
           jsonStr = jsonMatch[0];
         } else {
           // Strategy 3: Try to find answer content pattern
-          const answerMatch = jsonStr.match(/"answer":\s*"([^"]+)"/s) || 
-                             jsonStr.match(/'answer':\s*'([^']+)'/s) ||
-                             jsonStr.match(/answer\s*:\s*"([^"]+)"/s);
+          const answerMatch = jsonStr.match(/"answer":\s*"([^"]+)"/) || 
+                             jsonStr.match(/'answer':\s*'([^']+)'/) ||
+                             jsonStr.match(/answer\s*:\s*"([^"]+)"/);
           
           if (answerMatch && answerMatch[1]) {
             answer = answerMatch[1].trim();
@@ -253,7 +257,7 @@ export class ResponseNode {
         }
         
       } catch (parseError) {
-        console.error('[ResponseNode] All JSON parsing strategies failed:', parseError.message);
+        console.error('[ResponseNode] All JSON parsing strategies failed:', (parseError as Error).message);
         console.log('[ResponseNode] Full raw content:', content);
         
         // FALLBACK: Extract any meaningful content
@@ -306,7 +310,7 @@ export class ResponseNode {
   }
 
   // Extract actual page titles from the context to prevent source hallucination
-  extractPageTitlesFromContext(context) {
+  extractPageTitlesFromContext(context: string) {
     console.log('[ResponseNode] Extracting sources from context...');
     console.log('[ResponseNode] Context preview:', context.substring(0, 500) + (context.length > 500 ? '...' : ''));
     
@@ -326,7 +330,7 @@ export class ResponseNode {
     }
 
     // Remove duplicates while preserving order
-    const uniqueSources = [];
+    const uniqueSources: { title: string }[] = [];
     const seenTitles = new Set();
     
     sources.forEach(source => {
@@ -343,6 +347,8 @@ export class ResponseNode {
 }
 
 export class QueryClassifierNode {
+  private chain: any;
+  
   constructor() {
     const model = new ChatOllama({
       baseUrl: "http://localhost:11434",
@@ -398,7 +404,7 @@ export class QueryClassifierNode {
     ]);
   }
 
-  async invoke(input) {
+  async invoke(input: any) {
     try {
       const result = await this.chain.invoke({ question: input.question });
       const raw = (result.content || '').trim().toUpperCase();
@@ -416,6 +422,8 @@ export class QueryClassifierNode {
 }
 
 export class GeneralResponderNode {
+  private chain: any;
+  
   constructor() {
     const model = new ChatOllama({
       baseUrl: "http://localhost:11434",
@@ -440,7 +448,7 @@ export class GeneralResponderNode {
     ]);
   }
 
-  async invoke(input) {
+  async invoke(input: any) {
     try {
       const result = await this.chain.invoke({ question: input.question });
       const content = (result.content || '').trim();

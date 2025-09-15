@@ -33,21 +33,21 @@ export const fontClasses = {
 };
 
 // Function to combine font classes with theme fonts
-export const combineFontClasses = (baseClasses, fontType = 'primary') => {
+export const combineFontClasses = (baseClasses: string, fontType: string = 'primary') => {
   const fonts = getFontClasses();
-  const fontClass = fonts[fontType] || fonts.primary;
+  const fontClass = fonts[fontType as keyof typeof fonts] || fonts.primary;
   return `${baseClasses} ${fontClass}`;
 };
 
 // Convenience functions for common patterns
-export const getHeadingClasses = (level = 'h1', fontType = 'heading') => {
+export const getHeadingClasses = (level: keyof typeof fontClasses = 'h1', fontType: string = 'heading') => {
   return combineFontClasses(fontClasses[level], fontType);
 };
 
-export const getBodyClasses = (size = 'body', fontType = 'body') => {
+export const getBodyClasses = (size: keyof typeof fontClasses = 'body', fontType: string = 'body') => {
   return combineFontClasses(fontClasses[size], fontType);
 };
 
-export const getLabelClasses = (fontType = 'label') => {
+export const getLabelClasses = (fontType: string = 'label') => {
   return combineFontClasses(fontClasses.label, fontType);
 };

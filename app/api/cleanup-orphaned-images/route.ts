@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../lib/projectStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 import { readdir, unlink, rmdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     await projectStore.initialize();
     
     const imagesBaseDir = join(process.cwd(), 'public', 'images');
     let deletedFiles = [];
     let deletedDirs = [];
-    
     if (!existsSync(imagesBaseDir)) {
       return NextResponse.json({
         success: true,
@@ -20,16 +20,13 @@ export async function POST(request) {
         deletedDirs: []
       });
     }
-    
     // Get all project directories
     const projectDirs = await readdir(imagesBaseDir);
-    
     for (const projectId of projectDirs) {
       const projectImagesDir = join(imagesBaseDir, projectId);
       
       // Check if project still exists
       const project = await projectStore.getProject(projectId);
-      
       if (!project) {
         // Project doesn't exist, delete entire directory
         try {
@@ -47,15 +44,14 @@ export async function POST(request) {
         }
         continue;
       }
-      
       // Project exists, check individual image files
       try {
         const files = await readdir(projectImagesDir);
         const imageRecords = await projectStore.getImagesByProject(projectId);
         const dbImageUrls = new Set(
           imageRecords
-            .filter(img => img.image_url && img.image_url.startsWith('/images/'))
-            .map(img => img.image_url.split('/').pop()) // Get filename from URL
+            .filter((img: any) => img.image_url && img.image_url.startsWith('/images/'))
+            .map((img: any) => img.image_url.split('/').pop()) // Get filename from URL
         );
         
         for (const file of files) {
@@ -71,7 +67,6 @@ export async function POST(request) {
             }
           }
         }
-        
         // Check if directory is now empty
         const remainingFiles = await readdir(projectImagesDir);
         if (remainingFiles.length === 0) {
@@ -83,14 +78,12 @@ export async function POST(request) {
         console.warn(`[Image Cleanup] Error processing project ${projectId}:`, error);
       }
     }
-    
     return NextResponse.json({
       success: true,
       message: `Cleanup completed. Deleted ${deletedFiles.length} orphaned files and ${deletedDirs.length} empty directories.`,
       deletedFiles,
       deletedDirs
     });
-    
   } catch (error) {
     console.error('Error during image cleanup:', error);
     return NextResponse.json(

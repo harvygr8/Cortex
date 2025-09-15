@@ -8,12 +8,12 @@ import remarkGfm from 'remark-gfm';
 import useThemeStore from '../../lib/stores/themeStore';
 import SourceBadge from './SourceBadge';
 
-const ChatNode = memo(({ data, isConnectable, selected }) => {
+const ChatNode = memo(({ data, isConnectable, selected }: any) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const { chatCard, onDelete, onContextMenu, isConnecting } = data;
 
-  const handleContextMenu = (e) => {
+  const handleContextMenu = (e: React.MouseEvent) => {
     console.log('ChatNode context menu triggered', { onContextMenu, chatCard });
     if (onContextMenu) {
       onContextMenu(e, chatCard);
@@ -168,7 +168,7 @@ const ChatNode = memo(({ data, isConnectable, selected }) => {
           {chatCard.sources && chatCard.sources.length > 0 && (
             <div className={`mt-3 pt-3 border-t ${theme.border}`}>
               <div className="flex flex-wrap gap-1.5">
-                {chatCard.sources.map((source, idx) => (
+                {chatCard.sources.map((source: any, idx: number) => (
                   <SourceBadge key={idx} source={source} />
                 ))}
               </div>

@@ -1,4 +1,4 @@
-import { ChatOllama } from 'langchain/chat_models/ollama';
+import { ChatOllama } from '@langchain/community/chat_models/ollama';
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from '@langchain/core/output_parsers';
 
@@ -10,7 +10,7 @@ export const createOllamaModel = async () => {
   });
 };
 
-export const createPrompt = (template) => {
+export const createPrompt = (template: string) => {
   return ChatPromptTemplate.fromTemplate(template);
 };
 

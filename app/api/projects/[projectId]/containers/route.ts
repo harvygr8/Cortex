@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../lib/projectStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 
-export async function POST(request, { params }) {
+export async function POST(request: NextRequest, { params }: APIRouteParams) {
   try {
     const { projectId } = params;
+    if (!projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     const body = await request.json();
     
     const {
@@ -15,7 +19,6 @@ export async function POST(request, { params }) {
       height = 200,
       zIndex = 0
     } = body;
-
     const container = await projectStore.addContainer(
       projectId,
       label,
@@ -26,7 +29,6 @@ export async function POST(request, { params }) {
       height,
       zIndex
     );
-
     return NextResponse.json(container);
   } catch (error) {
     console.error('Error creating container:', error);
@@ -37,9 +39,12 @@ export async function POST(request, { params }) {
   }
 }
 
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
     const { projectId } = params;
+    if (!projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     const containers = await projectStore.getContainersByProject(projectId);
     return NextResponse.json(containers);
   } catch (error) {

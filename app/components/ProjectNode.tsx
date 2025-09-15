@@ -1,11 +1,30 @@
 'use client';
 
-import { memo } from 'react';
-import { Handle, Position } from 'reactflow';
-import { FileText } from 'lucide-react';
-import useThemeStore from '../../lib/stores/themeStore';
+import { memo } from 'react';
+import { Handle, Position } from 'reactflow';
+import { FileText } from 'lucide-react';
+import useThemeStore from '../../lib/stores/themeStore';
+import type { NodeComponentProps } from '../../types';
 
-const ProjectNode = memo(({ data, isConnectable, selected }) => {
+interface ProjectNodeProps extends NodeComponentProps {
+  data: {
+    project: {
+      id: string;
+      title: string;
+      description?: string;
+    };
+    pages: Array<{
+      id: string;
+      title: string;
+      content?: string;
+    }>;
+    onContextMenu?: (event: React.MouseEvent, project: any) => void;
+    onPageClick?: (pageId: string | null, action: string) => void;
+    isConnecting?: boolean;
+  };
+}
+
+const ProjectNode = memo(({ data, isConnectable, selected }: ProjectNodeProps) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const { project, pages, onContextMenu, isConnecting } = data;
@@ -39,7 +58,7 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
   const nodeHeight = calculateNodeHeight();
 
   // Simple function to strip markdown and get clean preview text
-  const getCleanPreviewText = (content) => {
+  const getCleanPreviewText = (content: string): string => {
     if (!content) return '';
     return content
       .replace(/#{1,6}\s/g, '') // Remove headers
@@ -56,7 +75,7 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
   return (
     <div 
       className="project-node relative"
-      onContextMenu={(e) => onContextMenu(e, project)}
+      onContextMenu={(e) => onContextMenu && onContextMenu(e, project)}
       style={{ width: '420px', height: `${nodeHeight}px` }}
     >
       <div 
@@ -192,7 +211,7 @@ const ProjectNode = memo(({ data, isConnectable, selected }) => {
           ) : (
             <div className="h-full overflow-auto">
               <div className="grid grid-cols-2 gap-2">
-                {pages.slice(0, 8).map((page) => (
+                {pages.slice(0, 8).map((page: any) => (
                   <div 
                     key={page.id}
                     onClick={(e) => {

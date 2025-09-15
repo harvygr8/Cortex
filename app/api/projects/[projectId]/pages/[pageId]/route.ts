@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../../lib/projectStore';
-import vectorStore from '../../../../../../lib/vectorStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
+import vectorStore from '@/lib/vectorStore';
 
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
+    if (!params.pageId) {
+      return NextResponse.json({ error: 'Page ID is required' }, { status: 400 });
+    }
     await projectStore.initialize();
     const page = await projectStore.getPage(params.pageId);
     if (!page) {
@@ -15,17 +19,17 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Failed to fetch page' }, { status: 500 });
   }
 }
-
-export async function PUT(request, { params }) {
+export async function PUT(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.pageId || !params.projectId) {
+      return NextResponse.json({ error: 'Page ID and Project ID are required' }, { status: 400 });
+    }
     const { title, content } = await request.json();
     const page = await projectStore.updatePage(params.pageId, title, content);
     
     // Update vector store after page update
     const project = await projectStore.getProject(params.projectId);
     await vectorStore.createOrUpdateProjectIndex(project);
-    
     return NextResponse.json(page);
   } catch (error) {
     console.error('Error updating page:', error);
@@ -33,11 +37,17 @@ export async function PUT(request, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
-    await projectStore.deletePage(params.pageId);
+    if (!params.pageId) {
+      return NextResponse.json({ error: 'Page ID is required' }, { status: 400 });
+    }
     
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
+    
+    await projectStore.deletePage(params.pageId);
     // Regenerate vectors after page deletion to remove deleted content
     try {
       console.log('[Delete Page] Regenerating vectors after page deletion...');
@@ -55,7 +65,6 @@ export async function DELETE(request, { params }) {
       console.error('[Delete Page] Vector store error (non-fatal):', vectorError);
       // Continue without vector store update
     }
-    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting page:', error);

@@ -15,6 +15,7 @@ export const colors = {
     sidebarLogo: 'bg-neutral-900 text-white',
     navbar: 'bg-white border-b border-neutral-200',
     warning: 'bg-amber-50 text-amber-800 border border-amber-200',
+    danger: 'text-red-600',
     chatBubble: {
       user: 'bg-neutral-800 text-white shadow-mdr',
       ai: 'bg-white text-neutral-900 shadow-md'
@@ -26,6 +27,8 @@ export const colors = {
       background: 'bg-white',
       text: 'text-neutral-900'
     },
+    overlay: 'bg-black/50',
+    dangerHover: 'hover:bg-red-50 hover:text-red-700',
     // Font classes - change these to update fonts globally
     font: {
       primary: 'font-ibm-plex-sans',
@@ -49,6 +52,7 @@ export const colors = {
     sidebarLogo: 'bg-neutral-100 text-neutral-900',
     navbar: 'bg-neutral-900 border-b border-neutral-700',
     warning: 'bg-amber-900/30 text-amber-200 border border-amber-700',
+    danger: 'text-red-400',
     chatBubble: {
       user: 'bg-neutral-700 text-white',
       ai: 'bg-neutral-800 text-neutral-100 border border-neutral-700'
@@ -60,6 +64,8 @@ export const colors = {
       background: 'bg-neutral-800',
       text: 'text-neutral-100'
     },
+    overlay: 'bg-black/50',
+    dangerHover: 'hover:bg-red-900/30 hover:text-red-300',
     // Font classes - change these to update fonts globally
     font: {
       primary: 'font-ibm-plex-sans',

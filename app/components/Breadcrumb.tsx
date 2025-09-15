@@ -4,14 +4,14 @@ import { useRouter } from 'next/navigation';
 import useThemeStore from '../../lib/stores/themeStore';
 import { getHeadingClasses, getBodyClasses } from '../../lib/utils/fontUtils';
 
-export default function Breadcrumb({ items, showLargeTitle = true }) {
+export default function Breadcrumb({ items, showLargeTitle = true }: any) {
   const router = useRouter();
   const { isDarkMode, colors, fonts } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
 
   return (
     <div className="flex items-center gap-1 mb-6">
-      {items.map((item, index) => (
+      {items.map((item: any, index: any) => (
         <div key={item.path || index} className="flex items-center">
           {index > 0 && (
             <span className={`text-sm mx-2 ${theme.secondary}`}>

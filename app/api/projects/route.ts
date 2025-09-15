@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import projectStore from '../../../lib/projectStore';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 
 export async function GET() {
   try {
@@ -14,7 +15,6 @@ export async function GET() {
     );
   }
 }
-
 interface CreateProjectRequest {
   title: string;
   description: string;

@@ -1,24 +1,52 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Edit, Trash2, Plus, Upload, RotateCcw, ClipboardList, FileText, Image as ImageIcon, ChevronRight, StickyNote } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, onAddPage, onImportData, onRegenerateVectors, onCreateTasks, onCreateScratchpad, onCreateImage }) {
+interface ContextMenuProps {
+  x: number;
+  y: number;
+  onClose: () => void;
+  onChat?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onAddPage?: () => void;
+  onImportData?: () => void;
+  onRegenerateVectors?: () => void;
+  onCreateTasks?: () => void;
+  onCreateScratchpad?: () => void;
+  onCreateImage?: () => void;
+}
+
+export default function ContextMenu({ 
+  x, 
+  y, 
+  onClose, 
+  onChat, 
+  onEdit, 
+  onDelete, 
+  onAddPage, 
+  onImportData, 
+  onRegenerateVectors, 
+  onCreateTasks, 
+  onCreateScratchpad, 
+  onCreateImage 
+}: ContextMenuProps) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
-  const menuRef = useRef(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [showNodeSubmenu, setShowNodeSubmenu] = useState(false);
   const [submenuPosition, setSubmenuPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
 
-    const handleEscape = (event) => {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
       }
@@ -33,7 +61,7 @@ export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, o
     };
   }, [onClose]);
 
-  const handleNodeSubmenuHover = (event) => {
+  const handleNodeSubmenuHover = (event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setSubmenuPosition({
       x: rect.right + 5,
@@ -170,7 +198,9 @@ export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, o
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                nodeType.onClick();
+                if (nodeType.onClick) {
+                  nodeType.onClick();
+                }
                 onClose();
               }}
               className={`w-full px-4 py-3 text-left flex items-start gap-3 ${theme.hover} transition-colors cursor-pointer`}

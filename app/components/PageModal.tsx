@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState, useEffect } from 'react';
 import { X, Edit } from 'lucide-react';
@@ -8,11 +9,19 @@ import MarkdownPreview from './MarkdownPreview';
 import DeletePageButton from './DeletePageButton';
 import Loader from './Loader';
 
-export default function PageModal({ isOpen, onClose, pageId, projectId, onPageDeleted }) {
-  const [page, setPage] = useState(null);
-  const [project, setProject] = useState(null);
+interface PageModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  pageId: string;
+  projectId: string;
+  onPageDeleted: () => void;
+}
+
+export default function PageModal({ isOpen, onClose, pageId, projectId, onPageDeleted }: PageModalProps) {
+  const [page, setPage] = useState<any>(null);
+  const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const setActiveProjectId = useProjectStore(state => state.setActiveProjectId);
   const { isDarkMode, colors } = useThemeStore();
@@ -47,13 +56,13 @@ export default function PageModal({ isOpen, onClose, pageId, projectId, onPageDe
       setProject(projectData);
     } catch (err) {
       console.error('Error fetching page:', err);
-      setError(err.message);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleContentSave = async (newContent) => {
+  const handleContentSave = async (newContent: string) => {
     try {
       const response = await fetch(`/api/projects/${projectId}/pages/${pageId}`, {
         method: 'PUT',
@@ -89,7 +98,7 @@ export default function PageModal({ isOpen, onClose, pageId, projectId, onPageDe
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e) => {
+  const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       handleClose();
     }
@@ -141,7 +150,7 @@ export default function PageModal({ isOpen, onClose, pageId, projectId, onPageDe
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center h-full">
-              <Loader />
+              <Loader text="Loading page..." />
             </div>
           ) : error ? (
             <div className="flex items-center justify-center h-full">

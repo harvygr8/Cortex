@@ -1,12 +1,16 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../lib/projectStore';
-import vectorStore from '../../../../lib/vectorStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
+import vectorStore from '@/lib/vectorStore';
 import { rmdir, unlink, readdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     await projectStore.initialize();
     const project = await projectStore.getProject(params.projectId);
     
@@ -16,7 +20,6 @@ export async function GET(request, { params }) {
         { status: 404 }
       );
     }
-
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error fetching project:', error);
@@ -26,10 +29,11 @@ export async function GET(request, { params }) {
     );
   }
 }
-
-export async function DELETE(request, { params }) {
+export async function DELETE(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     
     // Clean up project images directory
     const projectImagesDir = join(process.cwd(), 'public', 'images', params.projectId);
@@ -48,7 +52,6 @@ export async function DELETE(request, { params }) {
             console.warn(`[Project Cleanup] Could not delete file ${filepath}:`, fileError);
           }
         }
-        
         // Remove the empty directory
         await rmdir(projectImagesDir);
         console.log(`[Project Cleanup] Removed project images directory: ${projectImagesDir}`);
@@ -57,17 +60,14 @@ export async function DELETE(request, { params }) {
       console.warn(`[Project Cleanup] Could not clean up images directory for project ${params.projectId}:`, dirError);
       // Continue with project deletion even if image cleanup fails
     }
-    
     // Delete project from database (this will cascade delete related data)
     await projectStore.deleteProject(params.projectId);
-    
     // Clean up vector store
     try {
-      await vectorStore.deleteProjectIndex(params.projectId);
+      await vectorStore.clearProjectIndex(params.projectId);
     } catch (vectorError) {
       console.error('Vector store cleanup error (non-fatal):', vectorError);
     }
-    
     return NextResponse.json({ 
       success: true,
       message: 'Project and all associated files deleted successfully'
@@ -80,29 +80,23 @@ export async function DELETE(request, { params }) {
     );
   }
 }
-
-export async function PUT(request, { params }) {
+export async function PUT(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
     const body = await request.json();
-    
     // Handle position updates separately from metadata updates
     if (body.positionX !== undefined && body.positionY !== undefined) {
+      if (!params.projectId) {
+        return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+      }
       await projectStore.updateProjectPosition(params.projectId, body.positionX, body.positionY);
       return NextResponse.json({ success: true });
     }
-    
     // Handle metadata updates (title, description)
     const { title, description } = body;
-    const project = await projectStore.updateProject(params.projectId, title, description);
-    
-    if (!project) {
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      );
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
-
+    const project = await projectStore.updateProject(params.projectId, title, description);
     // Regenerate vectors after project update
     try {
       console.log('[Project Update] Regenerating vectors after project metadata change...');
@@ -114,7 +108,6 @@ export async function PUT(request, { params }) {
       console.error('[Project Update] Vector store error (non-fatal):', vectorError);
       // Continue without vector store update
     }
-
     return NextResponse.json(project);
   } catch (error) {
     console.error('Error updating project:', error);

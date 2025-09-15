@@ -1,14 +1,49 @@
 import { SimpleBM25Retriever } from './simpleBM25';
+import { SearchResult } from '../types';
+
+export interface DocumentWithContent extends SearchResult {
+  hasFullContent: boolean;
+  originalContent: string;
+}
+
+export interface HybridSearchResult {
+  pageContent: string;
+  metadata: {
+    projectId: string;
+    pageId: string;
+    pageTitle: string;
+    sqlitePageId?: string;
+    score?: number;
+    source?: string;
+  };
+  fullContent?: string;
+  hybridScore: number;
+  source: 'semantic' | 'keyword' | 'hybrid';
+  semanticRank?: number;
+  keywordRank?: number;
+  semanticScore?: number;
+  bm25Score?: number;
+  normalizedBM25?: number;
+}
+
+export interface SearchWeights {
+  semantic: number;
+  keyword: number;
+}
 
 export class HybridRetriever {
-  constructor(vectorStore, documents = []) {
+  public vectorStore: any;
+  public bm25Retriever: SimpleBM25Retriever | null;
+  public initialized: boolean;
+
+  constructor(vectorStore: any, documents: SearchResult[] | any[] = []) {
     this.vectorStore = vectorStore;
     this.bm25Retriever = null;
     this.initialized = false;
   }
 
   // Initialize BM25 with documents
-  async initializeBM25(documents) {
+  async initializeBM25(documents: SearchResult[] | any[]): Promise<void> {
     if (this.initialized) return;
     
     console.log('[HybridRetriever] Initializing Simple BM25 with', documents.length, 'documents');
@@ -30,11 +65,11 @@ export class HybridRetriever {
   }
 
   // Fetch full content from SQLite for BM25 initialization
-  async fetchFullContentFromSQLite(documents) {
+  async fetchFullContentFromSQLite(documents: SearchResult[]): Promise<DocumentWithContent[]> {
     try {
       const projectStore = await import('./projectStore');
       const documentsWithContent = await Promise.all(
-        documents.map(async (doc) => {
+        documents.map(async (doc: SearchResult): Promise<DocumentWithContent> => {
           const pageId = doc.metadata?.pageId || doc.metadata?.sqlitePageId;
           if (pageId) {
             try {
@@ -47,7 +82,7 @@ export class HybridRetriever {
                 originalContent: doc.pageContent // Keep reference to original
               };
             } catch (error) {
-              console.warn(`[HybridRetriever] Could not fetch content for page ${pageId}:`, error.message);
+              console.warn(`[HybridRetriever] Could not fetch content for page ${pageId}:`, (error as any).message);
               return { 
                 ...doc, 
                 hasFullContent: false,
@@ -73,7 +108,7 @@ export class HybridRetriever {
       return documentsWithContent;
     } catch (error) {
       console.error('[HybridRetriever] Error fetching content from SQLite:', error);
-      return documents.map(doc => ({
+      return documents.map((doc: SearchResult): DocumentWithContent => ({
         ...doc,
         hasFullContent: false,
         originalContent: doc.pageContent
@@ -82,7 +117,7 @@ export class HybridRetriever {
   }
 
   // Perform hybrid search combining both retrievers
-  async hybridSearch(query, k = 5, weights = { semantic: 0.6, keyword: 0.4 }) {
+  async hybridSearch(query: string, k = 5, weights: SearchWeights = { semantic: 0.6, keyword: 0.4 }): Promise<HybridSearchResult[]> {
     console.log('[HybridRetriever] Performing hybrid search for:', query);
     
     try {
@@ -93,12 +128,12 @@ export class HybridRetriever {
       // Log semantic result quality
       if (semanticResults.length > 0) {
         console.log('[HybridRetriever] Top semantic results:');
-        semanticResults.slice(0, 3).forEach((result, idx) => {
+        semanticResults.slice(0, 3).forEach((result: SearchResult, idx: number) => {
           console.log(`  ${idx + 1}. ${result.metadata?.pageTitle || 'Unknown'} (${result.pageContent.substring(0, 100)}...)`);
         });
       }
       
-      let keywordResults = [];
+      let keywordResults: SearchResult[] = [];
       try {
         // Try to get BM25 results
         console.log('[HybridRetriever] About to call BM25 search...');
@@ -124,7 +159,7 @@ export class HybridRetriever {
         // Log keyword result quality
         if (keywordResults.length > 0) {
           console.log('[HybridRetriever] Top keyword results:');
-          keywordResults.slice(0, 3).forEach((result, idx) => {
+          keywordResults.slice(0, 3).forEach((result: any, idx: number) => {
             console.log(`  ${idx + 1}. ${result.metadata?.pageTitle || 'Unknown'} (score: ${result.score?.toFixed(3) || 'N/A'})`);
           });
         }
@@ -134,7 +169,7 @@ export class HybridRetriever {
         }
       } catch (bm25Error) {
         console.error('[HybridRetriever] BM25 search failed with error:', bm25Error);
-        console.error('[HybridRetriever] Error stack:', bm25Error.stack);
+        console.error('[HybridRetriever] Error stack:', (bm25Error as any).stack);
         console.warn('[HybridRetriever] Using semantic results only due to BM25 failure');
         keywordResults = [];
       }
@@ -142,7 +177,7 @@ export class HybridRetriever {
       // If no keyword results, fall back to semantic-only
       if (keywordResults.length === 0) {
         console.log('[HybridRetriever] No BM25 results, returning semantic results only');
-        const semanticOnlyResults = semanticResults.slice(0, k).map((doc, index) => ({
+        const semanticOnlyResults = semanticResults.slice(0, k).map((doc: SearchResult, index: number): HybridSearchResult => ({
           ...doc,
           hybridScore: weights.semantic * (1 - index / Math.max(semanticResults.length, 1)),
           source: 'semantic',
@@ -150,7 +185,7 @@ export class HybridRetriever {
         }));
         
         console.log('[HybridRetriever] Semantic-only fallback results:');
-        semanticOnlyResults.forEach((result, idx) => {
+        semanticOnlyResults.forEach((result: HybridSearchResult, idx: number) => {
           console.log(`  ${idx + 1}. ${result.metadata?.pageTitle || 'Unknown'} (score: ${result.hybridScore?.toFixed(3)})`);
         });
         
@@ -184,12 +219,12 @@ export class HybridRetriever {
       console.log(`    Final Merged: ${finalResults.length}`);
       
       // Score analysis
-      const scores = finalResults.map(doc => doc.hybridScore || 0);
+      const scores = finalResults.map((doc: HybridSearchResult) => doc.hybridScore || 0);
       const scoreStats = {
         min: Math.min(...scores),
         max: Math.max(...scores),
-        avg: scores.reduce((sum, score) => sum + score, 0) / scores.length,
-        stdDev: Math.sqrt(scores.reduce((sum, score) => sum + Math.pow(score - (scores.reduce((a, b) => a + b, 0) / scores.length), 2), 0) / scores.length)
+        avg: scores.reduce((sum: number, score: number) => sum + score, 0) / scores.length,
+        stdDev: Math.sqrt(scores.reduce((sum: number, score: number) => sum + Math.pow(score - (scores.reduce((a: number, b: number) => a + b, 0) / scores.length), 2), 0) / scores.length)
       };
       
       console.log('\n📊 Score Analysis:');
@@ -200,14 +235,14 @@ export class HybridRetriever {
       console.log(`    Score Range: ${(scoreStats.max - scoreStats.min).toFixed(4)}`);
       
       // Source distribution
-      const sourceDistribution = finalResults.reduce((acc, doc) => {
+      const sourceDistribution = finalResults.reduce((acc: Record<string, number>, doc: HybridSearchResult) => {
         acc[doc.source || 'unknown'] = (acc[doc.source || 'unknown'] || 0) + 1;
         return acc;
       }, {});
       
       console.log('\n🎯 Source Distribution:');
       Object.entries(sourceDistribution).forEach(([source, count]) => {
-        const percentage = ((count / finalResults.length) * 100).toFixed(1);
+        const percentage = ((count as number / finalResults.length) * 100).toFixed(1);
         console.log(`    ${source}: ${count} results (${percentage}%)`);
       });
       
@@ -247,20 +282,20 @@ export class HybridRetriever {
   }
 
   // Merge results from both retrievers and re-rank
-  mergeAndRerank(semanticResults, keywordResults, query, weights) {
+  mergeAndRerank(semanticResults: SearchResult[], keywordResults: any[], query: string, weights: SearchWeights): HybridSearchResult[] {
     const merged = new Map();
     
     console.log('[HybridRetriever] Merging results:');
     console.log(`  Semantic: ${semanticResults.length}, Keyword: ${keywordResults.length}`);
     
     // Normalize BM25 scores for better hybrid ranking
-    const keywordScores = keywordResults.map(doc => doc.score || 0).filter(score => score > 0);
+    const keywordScores = keywordResults.map((doc: any) => doc.score || 0).filter((score: number) => score > 0);
     const maxKeywordScore = keywordScores.length > 0 ? Math.max(...keywordScores) : 1;
     const minKeywordScore = keywordScores.length > 0 ? Math.min(...keywordScores) : 0;
     const keywordScoreRange = maxKeywordScore - minKeywordScore || 1;
     
     // Process semantic results
-    semanticResults.forEach((doc, index) => {
+    semanticResults.forEach((doc: SearchResult, index: number) => {
       const normalizedRank = index / Math.max(semanticResults.length - 1, 1);
       const score = weights.semantic * (1 - normalizedRank);
       const key = `${doc.metadata.pageId}-${this.getContentHash(doc.pageContent)}`;
@@ -275,7 +310,7 @@ export class HybridRetriever {
     });
 
     // Process keyword results and merge
-    keywordResults.forEach((doc, index) => {
+    keywordResults.forEach((doc: any, index: number) => {
       const key = `${doc.metadata.pageId}-${this.getContentHash(doc.pageContent)}`;
       const existing = merged.get(key);
       
@@ -327,26 +362,26 @@ export class HybridRetriever {
   }
   
   // Simple content hash for deduplication
-  getContentHash(content) {
+  getContentHash(content: any) {
     return content.substring(0, 50).replace(/\s+/g, ' ').trim();
   }
   
   // Apply aggressive relevance filtering to eliminate irrelevant results
-  applyRelevanceFiltering(results, query) {
+  applyRelevanceFiltering(results: HybridSearchResult[], query: string): HybridSearchResult[] {
     if (results.length === 0) return results;
     
     console.log('[HybridRetriever] Applying relevance filtering for query:', query);
     
     // Calculate dynamic thresholds based on score distribution
-    const scores = results.map(r => r.hybridScore || 0).filter(s => s > 0);
+    const scores = results.map((r: HybridSearchResult) => r.hybridScore || 0).filter((s: number) => s > 0);
     if (scores.length === 0) {
       console.log('[HybridRetriever] No positive scores found, returning empty results');
       return [];
     }
     
     const maxScore = Math.max(...scores);
-    const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    const scoreStdDev = Math.sqrt(scores.reduce((sum, score) => sum + Math.pow(score - avgScore, 2), 0) / scores.length);
+    const avgScore = scores.reduce((sum: number, score: number) => sum + score, 0) / scores.length;
+    const scoreStdDev = Math.sqrt(scores.reduce((sum: number, score: number) => sum + Math.pow(score - avgScore, 2), 0) / scores.length);
     
     // Set aggressive thresholds
     const minAbsoluteScore = 0.1; // Minimum score to be considered relevant
@@ -363,7 +398,7 @@ export class HybridRetriever {
     // Apply keyword relevance check
     const queryTerms = this.extractKeyTerms(query.toLowerCase());
     
-    const filteredResults = results.filter(result => {
+    const filteredResults = results.filter((result: HybridSearchResult) => {
       const score = result.hybridScore || 0;
       
       // Score threshold check
@@ -392,7 +427,7 @@ export class HybridRetriever {
       console.log('[HybridRetriever] Too few results after filtering, applying relaxed threshold');
       const relaxedThreshold = finalThreshold * 0.7;
       
-      const relaxedResults = results.filter(result => {
+      const relaxedResults = results.filter((result: HybridSearchResult) => {
         const score = result.hybridScore || 0;
         return score >= relaxedThreshold && this.hasContentRelevance(result, queryTerms);
       });
@@ -405,7 +440,7 @@ export class HybridRetriever {
   }
   
   // Extract key terms from query for relevance checking
-  extractKeyTerms(query) {
+  extractKeyTerms(query: string): string[] {
     const stopWords = new Set([
       'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
       'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -417,13 +452,13 @@ export class HybridRetriever {
     
     return query.toLowerCase()
       .split(/\s+/)
-      .filter(term => term.length > 2 && !stopWords.has(term))
-      .map(term => term.replace(/[^\w]/g, ''))
-      .filter(term => term.length > 0);
+      .filter((term: string) => term.length > 2 && !stopWords.has(term))
+      .map((term: string) => term.replace(/[^\w]/g, ''))
+      .filter((term: string) => term.length > 0);
   }
   
   // Check if result content has relevance to query terms
-  hasContentRelevance(result, queryTerms) {
+  hasContentRelevance(result: HybridSearchResult, queryTerms: string[]): boolean {
     if (queryTerms.length === 0) return true;
     
     const content = (result.pageContent || '').toLowerCase();
@@ -431,7 +466,7 @@ export class HybridRetriever {
     const combinedText = content + ' ' + title;
     
     // Check if at least one significant query term appears in content
-    const termMatches = queryTerms.filter(term => {
+    const termMatches = queryTerms.filter((term: string) => {
       return combinedText.includes(term) || this.findSimilarTerms(term, combinedText);
     });
     
@@ -441,7 +476,7 @@ export class HybridRetriever {
   }
   
   // Find similar terms (basic fuzzy matching)
-  findSimilarTerms(queryTerm, content) {
+  findSimilarTerms(queryTerm: string, content: string): boolean {
     if (queryTerm.length < 4) return false;
     
     // Check for partial matches (substring of 70% or more)
@@ -451,7 +486,7 @@ export class HybridRetriever {
   }
 
   // Get search statistics for debugging
-  getSearchStats() {
+  getSearchStats(): { initialized: boolean; hasVectorStore: boolean; hasBM25: boolean } {
     return {
       initialized: this.initialized,
       hasVectorStore: !!this.vectorStore,

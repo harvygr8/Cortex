@@ -4,10 +4,31 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { ensureDir } from 'fs-extra';
 import { HybridRetriever } from './hybridRetriever';
 import fileLogger from './utils/fileLogger';
+import { Project, Page, SearchResult } from '../types';
 
-let instance = null;
+let instance: ProjectVectorStore | null = null;
+
+interface VectorDocument {
+  pageContent: string;
+  metadata: {
+    projectId: string;
+    projectTitle?: string;
+    pageId: string;
+    pageTitle: string;
+    sqlitePageId?: string;
+    sqliteProjectId?: string;
+    hasFullContent?: boolean;
+    contentLength?: number;
+    [key: string]: any;
+  };
+}
 
 export class ProjectVectorStore {
+  public embeddings!: OllamaEmbeddings;
+  public textSplitter!: RecursiveCharacterTextSplitter;
+  public initializedProjects!: Set<string>;
+  public hybridRetrievers!: Map<string, HybridRetriever>;
+
   constructor() {
     if (instance) {
       return instance;
@@ -44,7 +65,7 @@ export class ProjectVectorStore {
   }
 
   // Force regeneration of vectors for a project
-  async forceRegenerateProject(project) {
+  async forceRegenerateProject(project: Project) {
     console.log(`[VectorStore] Force regenerating vectors for project ${project.id}`);
     
     // Remove from initialized set to force regeneration
@@ -59,7 +80,7 @@ export class ProjectVectorStore {
     return await this.createOrUpdateProjectIndex(project);
   }
 
-  async createOrUpdateProjectIndex(project) {
+  async createOrUpdateProjectIndex(project: Project) {
     if (this.initializedProjects.has(project.id)) {
       console.log(`[VectorStore] Project ${project.id} already initialized, skipping`);
       return await this.loadProjectIndex(project.id);
@@ -75,7 +96,7 @@ export class ProjectVectorStore {
     // Fetch full content from SQLite for proper indexing
     const projectStore = await import('./projectStore');
     const documentsWithContent = await Promise.all(
-      project.pages.map(async (page) => {
+      (project.pages || []).map(async (page: Page) => {
         try {
           const fullPage = await projectStore.default.getPage(page.id);
           const fullContent = fullPage ? fullPage.content : '';
@@ -121,7 +142,7 @@ export class ProjectVectorStore {
     } : 'No documents');
     
     // Log content loading statistics
-    const contentStats = documents.reduce((acc, doc) => {
+    const contentStats = documents.reduce((acc: any, doc: any) => {
       acc.total++;
       if (doc.metadata.hasFullContent) {
         acc.withContent++;
@@ -147,7 +168,7 @@ export class ProjectVectorStore {
     console.log(`[VectorStore] Created ${splitDocs.length} intelligent chunks`);
     
     // Log chunk statistics
-    const stats = this.getChunkStats(splitDocs);
+    const stats = this.getChunkStats(splitDocs as any);
     if (stats) {
       console.log('[VectorStore] Chunk Statistics:', {
         totalChunks: stats.totalChunks,
@@ -180,7 +201,7 @@ export class ProjectVectorStore {
     
     // Initialize hybrid retriever with BM25
     console.log(`[VectorStore] Initializing hybrid retriever for project ${project.id}`);
-    const hybridRetriever = new HybridRetriever(vectorStore, splitDocs);
+      const hybridRetriever = new HybridRetriever(vectorStore, splitDocs as any);
     await hybridRetriever.initializeBM25(splitDocs);
     this.hybridRetrievers.set(project.id, hybridRetriever);
     
@@ -189,11 +210,11 @@ export class ProjectVectorStore {
   }
 
   // Utility method to get chunk statistics for debugging
-  getChunkStats(chunks) {
+  getChunkStats(chunks: VectorDocument[]) {
     if (!chunks || chunks.length === 0) return null;
     
-    const sizes = chunks.map(chunk => chunk.pageContent.length);
-    const totalChars = sizes.reduce((sum, size) => sum + size, 0);
+    const sizes = chunks.map((chunk: VectorDocument) => chunk.pageContent.length);
+    const totalChars = sizes.reduce((sum: number, size: number) => sum + size, 0);
     const avgSize = totalChars / chunks.length;
     const minSize = Math.min(...sizes);
     const maxSize = Math.max(...sizes);
@@ -210,7 +231,7 @@ export class ProjectVectorStore {
   }
 
   // Test method to demonstrate intelligent chunking
-  async testChunking(sampleText) {
+  async testChunking(sampleText: string) {
     console.log('[VectorStore] Testing intelligent chunking...');
     console.log(`Sample text length: ${sampleText.length} characters`);
     
@@ -220,10 +241,10 @@ export class ProjectVectorStore {
     };
     
     const chunks = await this.textSplitter.splitDocuments([testDoc]);
-    const stats = this.getChunkStats(chunks);
+    const stats = this.getChunkStats(chunks as any);
     
     console.log('[VectorStore] Test chunking results:', stats);
-    chunks.forEach((chunk, index) => {
+    (chunks as any).forEach((chunk: VectorDocument, index: number) => {
       console.log(`  Test Chunk ${index + 1}: ${chunk.pageContent.length} chars`);
       console.log(`    Content: "${chunk.pageContent.substring(0, 150)}..."`);
     });
@@ -231,7 +252,7 @@ export class ProjectVectorStore {
     return { chunks, stats };
   }
 
-  async loadProjectIndex(projectId) {
+  async loadProjectIndex(projectId: string) {
     try {
       console.log(`[VectorStore] Loading index for project ${projectId}`);
       const store = await FaissStore.load(
@@ -253,9 +274,9 @@ export class ProjectVectorStore {
           if (project && project.pages && project.pages.length > 0) {
             console.log(`[VectorStore] Found ${project.pages.length} pages, initializing BM25 with actual content`);
             
-            // Convert project pages to document format with full content
-            const documentsWithContent = await Promise.all(
-              project.pages.map(async (page) => {
+          // Convert project pages to document format with full content
+          const documentsWithContent = await Promise.all(
+            (project.pages || []).map(async (page: Page) => {
                 try {
                   const fullPage = await projectStore.default.getPage(page.id);
                   const fullContent = fullPage ? fullPage.content : '';
@@ -303,8 +324,8 @@ export class ProjectVectorStore {
             const hybridRetriever = new HybridRetriever(store, []);
             this.hybridRetrievers.set(projectId, hybridRetriever);
           }
-        } catch (projectError) {
-          console.warn(`[VectorStore] Could not load project for BM25 initialization:`, projectError.message);
+        } catch (projectError: unknown) {
+          console.warn(`[VectorStore] Could not load project for BM25 initialization:`, (projectError as Error).message);
           console.warn(`[VectorStore] Initializing hybrid retriever without BM25`);
           const hybridRetriever = new HybridRetriever(store, []);
           this.hybridRetrievers.set(projectId, hybridRetriever);
@@ -319,7 +340,7 @@ export class ProjectVectorStore {
     }
   }
 
-  async clearProjectIndex(projectId) {
+  async clearProjectIndex(projectId: string) {
     try {
       console.log(`[VectorStore] Clearing index for project ${projectId}`);
       const fs = await import('fs-extra');
@@ -337,7 +358,7 @@ export class ProjectVectorStore {
   }
 
   // New method for hybrid search
-  async hybridSearch(projectId, query, k = 5, weights = { semantic: 0.7, keyword: 0.3 }) {
+  async hybridSearch(projectId: string, query: string, k = 5, weights = { semantic: 0.7, keyword: 0.3 }) {
     console.log(`[VectorStore] Performing hybrid search for project ${projectId}`);
     
     const hybridRetriever = this.hybridRetrievers.get(projectId);
@@ -349,7 +370,7 @@ export class ProjectVectorStore {
       const semanticResults = await vectorStore.similaritySearch(query, k);
       
       // Enhance results with full content from SQLite
-      const enhancedResults = await this.enhanceSearchResultsWithContent(semanticResults, projectId);
+      const enhancedResults = await this.enhanceSearchResultsWithContent(semanticResults as any, projectId);
       
       return enhancedResults;
     }
@@ -367,7 +388,7 @@ export class ProjectVectorStore {
         if (project && project.pages && project.pages.length > 0) {
           // Load full content for BM25 initialization
           const documentsWithContent = await Promise.all(
-            project.pages.map(async (page) => {
+            (project.pages || []).map(async (page: Page) => {
               try {
                 const fullPage = await projectStore.default.getPage(page.id);
                 const fullContent = fullPage ? fullPage.content : '';
@@ -412,7 +433,7 @@ export class ProjectVectorStore {
           console.error(`[VectorStore] Cannot reinitialize - no project data available`);
         }
       } catch (error) {
-        console.error(`[VectorStore] Failed to reinitialize hybrid retriever:`, error.message);
+        console.error(`[VectorStore] Failed to reinitialize hybrid retriever:`, (error as Error).message);
       }
     }
     
@@ -427,7 +448,7 @@ export class ProjectVectorStore {
   }
 
   // Get hybrid retriever stats for debugging
-  getHybridRetrieverStats(projectId) {
+  getHybridRetrieverStats(projectId: string) {
     const hybridRetriever = this.hybridRetrievers.get(projectId);
     if (!hybridRetriever) {
       return { error: 'No hybrid retriever found for this project' };
@@ -436,7 +457,7 @@ export class ProjectVectorStore {
   }
 
   // Retrieve full content from SQLite for search results
-  async getContentFromSQLite(projectId, pageId) {
+  async getContentFromSQLite(projectId: string, pageId: string) {
     try {
       const projectStore = await import('./projectStore');
       const page = await projectStore.default.getPage(pageId);
@@ -448,9 +469,9 @@ export class ProjectVectorStore {
   }
 
   // Enhance search results with full content from SQLite
-  async enhanceSearchResultsWithContent(searchResults, projectId) {
+  async enhanceSearchResultsWithContent(searchResults: SearchResult[], projectId: string) {
     const enhancedResults = await Promise.all(
-      searchResults.map(async (result) => {
+      searchResults.map(async (result: SearchResult) => {
         const pageId = result.metadata?.pageId || result.metadata?.sqlitePageId;
         if (pageId) {
           const fullContent = await this.getContentFromSQLite(projectId, pageId);
@@ -471,7 +492,7 @@ export class ProjectVectorStore {
   }
 
   // Validate data consistency between SQLite and FAISS
-  async validateDataConsistency(projectId) {
+  async validateDataConsistency(projectId: string) {
     try {
       console.log(`[VectorStore] Validating data consistency for project ${projectId}`);
       
@@ -519,7 +540,7 @@ export class ProjectVectorStore {
       }
       
       // Check if all pages in SQLite have corresponding vectors
-      const sqlitePageIds = new Set(project.pages.map(page => page.id));
+      const sqlitePageIds = new Set((project.pages || []).map((page: any) => page.id));
       console.log(`[VectorStore] SQLite has ${sqlitePageIds.size} pages`);
       
       // This is a basic check - in a full implementation, you'd want to check
@@ -535,18 +556,18 @@ export class ProjectVectorStore {
       console.log(`[VectorStore] Validation result:`, validation);
       return validation;
       
-    } catch (error) {
-      console.error(`[VectorStore] Error during validation:`, error);
-      return { 
-        valid: false, 
-        message: `Validation failed: ${error.message}`,
-        action: 'investigate'
-      };
+        } catch (error: unknown) {
+          console.error(`[VectorStore] Error during validation:`, error);
+          return { 
+            valid: false, 
+            message: `Validation failed: ${(error as Error).message}`,
+            action: 'investigate'
+          };
     }
   }
 
   // Force reinitialize hybrid retriever for a project
-  async forceReinitializeHybridRetriever(projectId) {
+  async forceReinitializeHybridRetriever(projectId: string) {
     console.log(`[VectorStore] Force reinitializing hybrid retriever for project ${projectId}`);
     
     try {
@@ -567,7 +588,7 @@ export class ProjectVectorStore {
       
       // Create new documents with full content
       const documentsWithContent = await Promise.all(
-        project.pages.map(async (page) => {
+        (project.pages || []).map(async (page: Page) => {
           try {
             const fullPage = await projectStore.default.getPage(page.id);
             const fullContent = fullPage ? fullPage.content : '';
@@ -607,8 +628,7 @@ export class ProjectVectorStore {
       const documents = documentsWithContent;
       
       // Create new hybrid retriever
-      const HybridRetriever = await import('./hybridRetriever');
-      const hybridRetriever = new HybridRetriever.default(vectorStore, documents);
+      const hybridRetriever = new HybridRetriever(vectorStore, documents as any);
       await hybridRetriever.initializeBM25(documents);
       
       // Replace the existing one

@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
@@ -6,14 +7,20 @@ import Modal from './Modal';
 import useThemeStore from '../../lib/stores/themeStore';
 import { getHeadingClasses, getLabelClasses } from '../../lib/utils/fontUtils';
 
-export default function NewProjectModal({ isOpen, onClose, onProjectCreated }) {
+interface NewProjectModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onProjectCreated: (project: any) => void;
+}
+
+export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: NewProjectModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const { isDarkMode, colors, fonts } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 

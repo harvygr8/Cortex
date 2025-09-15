@@ -3,11 +3,17 @@
 import { Loader2 } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
+interface VectorProcessingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  message?: string;
+}
+
 export default function VectorProcessingModal({ 
   isOpen, 
   onClose, 
   message = "Processing your content..."
-}) {
+}: VectorProcessingModalProps) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
 

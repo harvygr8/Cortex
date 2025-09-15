@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../../lib/projectStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 
 // GET /api/projects/[projectId]/scratchpads/[scratchpadId]
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
+    if (!params.scratchpadId) {
+      return NextResponse.json({ error: 'Scratchpad ID is required' }, { status: 400 });
+    }
     await projectStore.initialize();
     const scratchpad = await projectStore.getScratchpad(params.scratchpadId);
     
@@ -13,7 +17,6 @@ export async function GET(request, { params }) {
         { status: 404 }
       );
     }
-
     return NextResponse.json(scratchpad);
   } catch (error) {
     console.error('Error fetching scratchpad:', error);
@@ -23,29 +26,25 @@ export async function GET(request, { params }) {
     );
   }
 }
-
 // PUT /api/projects/[projectId]/scratchpads/[scratchpadId]
-export async function PUT(request, { params }) {
+export async function PUT(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.scratchpadId) {
+      return NextResponse.json({ error: 'Scratchpad ID is required' }, { status: 400 });
+    }
     const { text, positionX, positionY, sourceHandle, targetHandle, projectId } = await request.json();
-    
     if (text !== undefined) {
       await projectStore.updateScratchpadText(params.scratchpadId, text);
     }
-    
     if (positionX !== undefined && positionY !== undefined) {
       await projectStore.updateScratchpadPosition(params.scratchpadId, positionX, positionY);
     }
-    
     if (sourceHandle !== undefined || targetHandle !== undefined) {
       await projectStore.updateScratchpadHandles(params.scratchpadId, sourceHandle, targetHandle);
     }
-    
     if (projectId !== undefined) {
       await projectStore.updateScratchpadProject(params.scratchpadId, projectId);
     }
-
     const updatedScratchpad = await projectStore.getScratchpad(params.scratchpadId);
     return NextResponse.json(updatedScratchpad);
   } catch (error) {
@@ -58,9 +57,11 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/projects/[projectId]/scratchpads/[scratchpadId]
-export async function DELETE(request, { params }) {
+export async function DELETE(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.scratchpadId) {
+      return NextResponse.json({ error: 'Scratchpad ID is required' }, { status: 400 });
+    }
     await projectStore.deleteScratchpad(params.scratchpadId);
     return NextResponse.json({ success: true });
   } catch (error) {

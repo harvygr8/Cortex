@@ -1,11 +1,12 @@
 'use client';
+import React from 'react';
 
 import { memo, useState, useEffect } from 'react';
 import { Handle, Position } from 'reactflow';
 import { ClipboardList, Plus, Trash2, Check, X } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-const TasksNode = memo(({ data, isConnectable, selected }) => {
+const TasksNode = memo(({ data, isConnectable, selected }: any) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const { tasksCard, onDelete, onContextMenu, isConnecting } = data;
@@ -54,7 +55,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
     loadTasks();
   }, [tasksCard.id, tasksCard.projectId]);
 
-  const handleContextMenu = (e) => {
+  const handleContextMenu = (e: React.MouseEvent) => {
     console.log('TasksNode context menu triggered', { onContextMenu, tasksCard });
     if (onContextMenu) {
       onContextMenu(e, tasksCard);
@@ -81,7 +82,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
         
         if (response.ok) {
           const newTask = await response.json();
-          setTasks(prev => [...prev, newTask]);
+          setTasks((prev: any[]) => [...prev, newTask]);
         } else {
           console.error('Failed to save task to database');
           // Restore the input text on failure
@@ -95,12 +96,12 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
     }
   };
 
-  const toggleTask = async (taskId) => {
-    const task = tasks.find(t => t.id == taskId); // Use == to handle string/number conversion
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find((t: any) => t.id == taskId); // Use == to handle string/number conversion
     if (!task) return;
     
     // Optimistically update UI
-    setTasks(prev => prev.map(t => 
+    setTasks((prev: any[]) => prev.map((t: any) => 
       t.id == taskId ? { ...t, completed: !t.completed } : t
     ));
     
@@ -119,31 +120,31 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
       if (response.ok) {
         const updatedTask = await response.json();
         // Update with the response data to ensure consistency
-        setTasks(prev => prev.map(t => 
+        setTasks((prev: any[]) => prev.map((t: any) => 
           t.id == taskId ? updatedTask : t
         ));
       } else {
         console.error('Failed to update task in database');
         // Revert optimistic update on failure
-        setTasks(prev => prev.map(t => 
+        setTasks((prev: any[]) => prev.map((t: any) => 
           t.id == taskId ? { ...t, completed: task.completed } : t
         ));
       }
     } catch (error) {
       console.error('Error updating task:', error);
       // Revert optimistic update on failure
-      setTasks(prev => prev.map(t => 
+      setTasks((prev: any[]) => prev.map((t: any) => 
         t.id == taskId ? { ...t, completed: task.completed } : t
       ));
     }
   };
 
-  const deleteTask = async (taskId) => {
-    const taskToDelete = tasks.find(t => t.id == taskId); // Use == to handle string/number conversion
+  const deleteTask = async (taskId: string) => {
+    const taskToDelete = tasks.find((t: any) => t.id == taskId); // Use == to handle string/number conversion
     if (!taskToDelete) return;
     
     // Optimistically update UI
-    setTasks(prev => prev.filter(task => task.id != taskId));
+    setTasks((prev: any[]) => prev.filter((task: any) => task.id != taskId));
     
     // Persist to database
     try {
@@ -154,20 +155,20 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
       if (!response.ok) {
         console.error('Failed to delete task from database');
         // Revert optimistic update on failure
-        setTasks(prev => [...prev, taskToDelete].sort((a, b) => 
+        setTasks((prev: any[]) => [...prev, taskToDelete].sort((a: any, b: any) => 
           (a.order_index || 0) - (b.order_index || 0)
         ));
       }
     } catch (error) {
       console.error('Error deleting task:', error);
       // Revert optimistic update on failure
-      setTasks(prev => [...prev, taskToDelete].sort((a, b) => 
+      setTasks((prev: any[]) => [...prev, taskToDelete].sort((a: any, b: any) => 
         (a.order_index || 0) - (b.order_index || 0)
       ));
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       addTask();
     }
@@ -305,7 +306,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
             </div>
           ) : (
             <div className="space-y-2">
-              {tasks.map((task) => (
+              {tasks.map((task: any) => (
                 <div
                   key={task.id}
                   className={`flex items-center gap-3 p-2 rounded border transition-all ${
@@ -352,7 +353,7 @@ const TasksNode = memo(({ data, isConnectable, selected }) => {
           <div className={`mt-3 pt-3 border-t ${theme.border}`}>
             <div className="flex justify-between items-center text-xs">
               <span className={theme.secondary}>
-                {tasks.filter(t => t.completed).length} of {tasks.length} completed
+                {tasks.filter((t: any) => t.completed).length} of {tasks.length} completed
               </span>
             </div>
           </div>

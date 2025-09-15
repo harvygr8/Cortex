@@ -1,11 +1,12 @@
 'use client';
+import React from 'react';
 
 import { memo, useState, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
 import { Image as ImageIcon, X, Upload, ExternalLink } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-const ImageNode = memo(({ data, isConnectable, selected }) => {
+const ImageNode = memo(({ data, isConnectable, selected }: any) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const { imageCard, onDelete, onContextMenu, isConnecting } = data;
@@ -14,20 +15,20 @@ const ImageNode = memo(({ data, isConnectable, selected }) => {
   const [imageAlt, setImageAlt] = useState(imageCard.imageAlt || '');
   const [isEditing, setIsEditing] = useState(!imageCard.imageUrl);
   const [isLoading, setIsLoading] = useState(false);
-  const [lastSaved, setLastSaved] = useState(null);
-  const fileInputRef = useRef(null);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleContextMenu = (e) => {
+  const handleContextMenu = (e: React.MouseEvent) => {
     if (onContextMenu) {
       onContextMenu(e, imageCard);
     }
   };
 
-  const handleUrlChange = (e) => {
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImageUrl(e.target.value);
   };
 
-  const handleAltChange = (e) => {
+  const handleAltChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImageAlt(e.target.value);
   };
 
@@ -59,8 +60,8 @@ const ImageNode = memo(({ data, isConnectable, selected }) => {
     }
   };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setIsLoading(true);
       
@@ -318,8 +319,12 @@ const ImageNode = memo(({ data, isConnectable, selected }) => {
                       alt={imageAlt || 'Image'}
                       className="max-w-full max-h-full object-contain"
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const nextSibling = target.nextSibling as HTMLElement;
+                        if (nextSibling) {
+                          nextSibling.style.display = 'flex';
+                        }
                       }}
                     />
                     <div className="hidden flex-col items-center justify-center text-center p-4">

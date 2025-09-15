@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../../lib/projectStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 
 // GET /api/projects/[projectId]/chat-messages/[messageId]
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
+    if (!params.messageId) {
+      return NextResponse.json({ error: 'Message ID is required' }, { status: 400 });
+    }
     await projectStore.initialize();
     const chatMessage = await projectStore.getChatMessage(params.messageId);
     
@@ -13,7 +17,6 @@ export async function GET(request, { params }) {
         { status: 404 }
       );
     }
-
     return NextResponse.json(chatMessage);
   } catch (error) {
     console.error('Error fetching chat message:', error);
@@ -23,25 +26,22 @@ export async function GET(request, { params }) {
     );
   }
 }
-
 // PUT /api/projects/[projectId]/chat-messages/[messageId]
-export async function PUT(request, { params }) {
+export async function PUT(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.messageId) {
+      return NextResponse.json({ error: 'Message ID is required' }, { status: 400 });
+    }
     const { positionX, positionY, sourceHandle, targetHandle, projectId } = await request.json();
-    
     if (positionX !== undefined && positionY !== undefined) {
       await projectStore.updateChatMessagePosition(params.messageId, positionX, positionY);
     }
-    
     if (sourceHandle !== undefined || targetHandle !== undefined) {
       await projectStore.updateChatMessageHandles(params.messageId, sourceHandle, targetHandle);
     }
-    
     if (projectId !== undefined) {
       await projectStore.updateChatMessageProject(params.messageId, projectId);
     }
-
     const updatedMessage = await projectStore.getChatMessage(params.messageId);
     return NextResponse.json(updatedMessage);
   } catch (error) {
@@ -54,9 +54,11 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/projects/[projectId]/chat-messages/[messageId]
-export async function DELETE(request, { params }) {
+export async function DELETE(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.messageId) {
+      return NextResponse.json({ error: 'Message ID is required' }, { status: 400 });
+    }
     await projectStore.deleteChatMessage(params.messageId);
     return NextResponse.json({ success: true });
   } catch (error) {

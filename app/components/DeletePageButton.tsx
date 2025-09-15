@@ -1,10 +1,17 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function DeletePageButton({ pageId, projectId, onPageDeleted }) {
+interface DeletePageButtonProps {
+  pageId: string;
+  projectId: string;
+  onPageDeleted: () => void;
+}
+
+export default function DeletePageButton({ pageId, projectId, onPageDeleted }: DeletePageButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;

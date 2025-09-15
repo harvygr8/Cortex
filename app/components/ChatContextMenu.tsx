@@ -1,8 +1,19 @@
 'use client';
+import React from 'react';
 
 import { useEffect, useRef } from 'react';
 import { Trash2, Copy, Download, Unlink } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
+
+interface ChatContextMenuProps {
+  x: number;
+  y: number;
+  onClose: () => void;
+  onDelete: () => void;
+  onCopyResponse: () => void;
+  onExportToFile: () => void;
+  onDetach: () => void;
+}
 
 export default function ChatContextMenu({ 
   x, 
@@ -12,19 +23,19 @@ export default function ChatContextMenu({
   onCopyResponse, 
   onExportToFile,
   onDetach
-}) {
+}: ChatContextMenuProps) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
-  const menuRef = useRef(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as any)) {
         onClose();
       }
     };
 
-    const handleEscape = (event) => {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
       }

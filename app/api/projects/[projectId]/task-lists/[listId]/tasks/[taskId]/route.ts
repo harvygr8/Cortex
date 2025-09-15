@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../../../../lib/projectStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 
 // GET /api/projects/[projectId]/task-lists/[listId]/tasks/[taskId]
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
+    if (!params.taskId) {
+      return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
+    }
     await projectStore.initialize();
     const task = await projectStore.getTask(params.taskId);
     
@@ -13,7 +17,6 @@ export async function GET(request, { params }) {
         { status: 404 }
       );
     }
-
     return NextResponse.json(task);
   } catch (error) {
     console.error('Error fetching task:', error);
@@ -23,28 +26,18 @@ export async function GET(request, { params }) {
     );
   }
 }
-
 // PUT /api/projects/[projectId]/task-lists/[listId]/tasks/[taskId]
-export async function PUT(request, { params }) {
+export async function PUT(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
-    const { text, completed, orderIndex } = await request.json();
-    
-    const task = await projectStore.getTask(params.taskId);
-    if (!task) {
-      return NextResponse.json(
-        { error: 'Task not found' },
-        { status: 404 }
-      );
+    if (!params.taskId) {
+      return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
     }
-
-    const updates = {};
+    const { text, completed, orderIndex } = await request.json();
+    const updates: any = {};
     if (text !== undefined) updates.text = text;
     if (completed !== undefined) updates.completed = completed;
     if (orderIndex !== undefined) updates.order_index = orderIndex;
-    
     await projectStore.updateTask(params.taskId, updates);
-
     const updatedTask = await projectStore.getTask(params.taskId);
     return NextResponse.json(updatedTask);
   } catch (error) {
@@ -57,9 +50,11 @@ export async function PUT(request, { params }) {
 }
 
 // DELETE /api/projects/[projectId]/task-lists/[listId]/tasks/[taskId]
-export async function DELETE(request, { params }) {
+export async function DELETE(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.taskId) {
+      return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
+    }
     await projectStore.deleteTask(params.taskId);
     return NextResponse.json({ success: true });
   } catch (error) {

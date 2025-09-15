@@ -3,7 +3,11 @@
 import { Loader2 } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function Loader({ text }) {
+interface LoaderProps {
+  text: string;
+}
+
+export default function Loader({ text }: LoaderProps) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   

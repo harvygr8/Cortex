@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../lib/projectStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 
 // GET /api/projects/[projectId]/chat-messages
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     await projectStore.initialize();
     const chatMessages = await projectStore.getChatMessagesByProject(params.projectId);
     return NextResponse.json(chatMessages);
@@ -15,11 +19,12 @@ export async function GET(request, { params }) {
     );
   }
 }
-
 // POST /api/projects/[projectId]/chat-messages
-export async function POST(request, { params }) {
+export async function POST(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     const { query, response, sources = [], positionX = 0, positionY = 0, sourceHandle = null, targetHandle = null } = await request.json();
     
     if (!query || !response) {
@@ -28,7 +33,6 @@ export async function POST(request, { params }) {
         { status: 400 }
       );
     }
-
     const chatMessage = await projectStore.addChatMessage(
       params.projectId,
       query,
@@ -39,7 +43,6 @@ export async function POST(request, { params }) {
       sourceHandle,
       targetHandle
     );
-
     return NextResponse.json(chatMessage);
   } catch (error) {
     console.error('Error creating chat message:', error);

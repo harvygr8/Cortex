@@ -1,28 +1,29 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../lib/projectStore';
-import vectorStore from '../../../../../lib/vectorStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
+import vectorStore from '@/lib/vectorStore';
 import { processDocument } from '../../../../../lib/utils/markdownProcessor';
 
-export async function POST(request, { params }) {
+export async function POST(request: NextRequest, { params }: APIRouteParams) {
   console.log('Upload route hit - processing document');
   console.log('Project ID:', params.projectId);
   
   try {
+    if (!params.projectId) {
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
+    }
     const formData = await request.formData();
     const file = formData.get('file');
-    console.log('File received:', file?.name);
-
+    console.log('File received:', (file as any)?.name);
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided' },
         { status: 400 }
       );
     }
-
     // Process the document
-    const processedDoc = await processDocument(file);
+    const processedDoc = await processDocument(file as File);
     console.log('Document processed:', processedDoc.title);
-
     // Initialize project store and get project
     await projectStore.initialize();
     const project = await projectStore.getProject(params.projectId);
@@ -33,7 +34,6 @@ export async function POST(request, { params }) {
         { status: 404 }
       );
     }
-
     // Create new page with processed content
     const page = await projectStore.addPage(
       params.projectId,
@@ -41,7 +41,6 @@ export async function POST(request, { params }) {
       processedDoc.content
     );
     console.log('Page created:', page?.id);
-    
     // Generate vectors after page creation
     let vectorGenerationSuccess = false;
     try {
@@ -70,15 +69,8 @@ export async function POST(request, { params }) {
   } catch (error) {
     console.error('Error processing upload:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to process upload' },
+      { error: (error as any).message || 'Failed to process upload' },
       { status: 500 }
     );
   }
 }
-
-// Configure accepted methods
-export const config = {
-  api: {
-    bodyParser: false, // Disable the default body parser
-  },
-}; 

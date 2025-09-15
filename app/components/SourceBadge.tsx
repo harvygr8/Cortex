@@ -3,7 +3,11 @@
 import { FileText } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function SourceBadge({ source }) {
+interface SourceBadgeProps {
+  source: string | { title: string } | null;
+}
+
+export default function SourceBadge({ source }: SourceBadgeProps) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
 

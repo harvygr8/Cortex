@@ -1,4 +1,7 @@
 class OllamaStatus {
+  public baseUrl: string;
+  public isRunning: boolean;
+
   constructor() {
     this.baseUrl = 'http://localhost:11434';
     this.isRunning = false;
@@ -12,8 +15,8 @@ class OllamaStatus {
       this.isRunning = response.ok;
       console.log('OllamaStatus: Server status check result:', this.isRunning);
       return response.ok;
-    } catch (error) {
-      console.error('OllamaStatus: Server check failed:', error.message);
+    } catch (error: unknown) {
+      console.error('OllamaStatus: Server check failed:', (error as Error).message);
       this.isRunning = false;
       return false;
     }
@@ -32,8 +35,8 @@ class OllamaStatus {
       const modelExists = data.models?.includes(modelName) || false;
       console.log(`OllamaStatus: Model ${modelName} ${modelExists ? 'found' : 'not found'}`);
       return modelExists;
-    } catch (error) {
-      console.error('OllamaStatus: Model check failed:', error.message);
+    } catch (error: unknown) {
+      console.error('OllamaStatus: Model check failed:', (error as Error).message);
       return false;
     }
   }

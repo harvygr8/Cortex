@@ -1,12 +1,16 @@
-import { NextResponse } from 'next/server';
-import projectStore from '../../../../../../lib/projectStore';
+import { NextRequest, NextResponse } from 'next/server';
+import type { APIRouteParams } from '@/types';
+import projectStore from '@/lib/projectStore';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
 // GET /api/projects/[projectId]/images/[imageId]
-export async function GET(request, { params }) {
+export async function GET(request: NextRequest, { params }: APIRouteParams) {
   try {
+    if (!params.imageId) {
+      return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
+    }
     await projectStore.initialize();
     const image = await projectStore.getImage(params.imageId);
     
@@ -16,7 +20,6 @@ export async function GET(request, { params }) {
         { status: 404 }
       );
     }
-
     return NextResponse.json(image);
   } catch (error) {
     console.error('Error fetching image:', error);
@@ -26,29 +29,25 @@ export async function GET(request, { params }) {
     );
   }
 }
-
 // PUT /api/projects/[projectId]/images/[imageId]
-export async function PUT(request, { params }) {
+export async function PUT(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
+    if (!params.imageId) {
+      return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
+    }
     const { imageUrl, imageAlt, positionX, positionY, sourceHandle, targetHandle, projectId } = await request.json();
-    
     if (imageUrl !== undefined || imageAlt !== undefined) {
       await projectStore.updateImageData(params.imageId, imageUrl, imageAlt);
     }
-    
     if (positionX !== undefined && positionY !== undefined) {
       await projectStore.updateImagePosition(params.imageId, positionX, positionY);
     }
-    
     if (sourceHandle !== undefined || targetHandle !== undefined) {
       await projectStore.updateImageHandles(params.imageId, sourceHandle, targetHandle);
     }
-    
     if (projectId !== undefined) {
       await projectStore.updateImageProject(params.imageId, projectId);
     }
-
     const updatedImage = await projectStore.getImage(params.imageId);
     return NextResponse.json(updatedImage);
   } catch (error) {
@@ -59,15 +58,14 @@ export async function PUT(request, { params }) {
     );
   }
 }
-
 // DELETE /api/projects/[projectId]/images/[imageId]
-export async function DELETE(request, { params }) {
+export async function DELETE(request: NextRequest, { params }: APIRouteParams) {
   try {
-    await projectStore.initialize();
-    
+    if (!params.imageId) {
+      return NextResponse.json({ error: 'Image ID is required' }, { status: 400 });
+    }
     // Get image data before deletion to clean up the file
     const image = await projectStore.getImage(params.imageId);
-    
     if (image && image.image_url && image.image_url.startsWith('/images/')) {
       // Extract filename from URL (e.g., /images/projectId/filename.jpg)
       const urlParts = image.image_url.split('/');
@@ -88,10 +86,8 @@ export async function DELETE(request, { params }) {
         }
       }
     }
-    
     // Delete from database
     await projectStore.deleteImage(params.imageId);
-    
     return NextResponse.json({ 
       success: true,
       message: 'Image and associated file deleted successfully'

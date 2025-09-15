@@ -1,10 +1,11 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
+export default function AddPageModal({ project, isOpen, onClose, onSubmit }: any) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   
@@ -14,7 +15,7 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
 
@@ -35,16 +36,16 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit }) {
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: any) => {
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [(e.target as any).name]: (e.target as any).value
     }));
   };
 
   if (!isOpen) return null;
 
-  const handleOverlayClick = (e) => {
+  const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }

@@ -3,7 +3,13 @@
 import { X } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function Modal({ isOpen, onClose, children }) {
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+export default function Modal({ isOpen, onClose, children }: ModalProps) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   

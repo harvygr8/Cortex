@@ -5,7 +5,7 @@ import { NodeResizer } from 'reactflow';
 import { Palette, Trash2, Edit3 } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-const ContainerNode = memo(({ id, data, selected }) => {
+const ContainerNode = memo(({ id, data, selected }: any) => {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   
@@ -15,8 +15,8 @@ const ContainerNode = memo(({ id, data, selected }) => {
   const containerSize = data.size || { width: 300, height: 200 };
   const [isResizing, setIsResizing] = useState(false);
   const containerColor = data.color || '#3b82f6';
-  const containerRef = useRef(null);
-  const colorPickerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
   
   //
   
@@ -41,7 +41,7 @@ const ContainerNode = memo(({ id, data, selected }) => {
     }
   };
 
-  const handleColorChange = (color) => {
+  const handleColorChange = (color: string) => {
     console.log('ContainerNode: handleColorChange called with color:', color);
     console.log('ContainerNode: Current containerColor:', containerColor);
     console.log('ContainerNode: Container ID:', id);
@@ -59,7 +59,7 @@ const ContainerNode = memo(({ id, data, selected }) => {
         console.log('ContainerNode: data.onUpdateColor call completed, result:', result);
         if (result && typeof result.then === 'function') {
           console.log('ContainerNode: data.onUpdateColor returned a promise');
-          result.then(() => console.log('ContainerNode: Promise resolved')).catch(err => console.error('ContainerNode: Promise rejected:', err));
+          result.then(() => console.log('ContainerNode: Promise resolved')).catch((err: any) => console.error('ContainerNode: Promise rejected:', err));
         }
       } catch (error) {
         console.error('ContainerNode: Error calling data.onUpdateColor:', error);
@@ -78,8 +78,8 @@ const ContainerNode = memo(({ id, data, selected }) => {
 
   // Close color picker when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
         setShowColorPicker(false);
       }
     };
@@ -175,7 +175,7 @@ const ContainerNode = memo(({ id, data, selected }) => {
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <div className="grid grid-cols-5 gap-1">
-                  {predefinedColors.map((color) => (
+                  {predefinedColors.map((color: any) => (
                     <button
                       key={color}
                       onClick={(e) => {
@@ -230,7 +230,6 @@ const ContainerNode = memo(({ id, data, selected }) => {
           isVisible={selected}
           minWidth={50}
           minHeight={30}
-          handleSize={16}
           handleClassName="nodrag"
           handleStyle={{
             border: `2px solid ${containerColor}`,
@@ -252,8 +251,8 @@ const ContainerNode = memo(({ id, data, selected }) => {
           onResize={(event, params) => {
             // Avoid React state during drag; update DOM directly for smoothness
             if (containerRef.current) {
-              containerRef.current.style.width = `${params.width}px`;
-              containerRef.current.style.height = `${params.height}px`;
+              (containerRef.current as HTMLElement).style.width = `${params.width}px`;
+              (containerRef.current as HTMLElement).style.height = `${params.height}px`;
             }
           }}
           onResizeEnd={async (event, params) => {
