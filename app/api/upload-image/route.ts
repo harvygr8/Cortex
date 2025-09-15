@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file');
-    const projectId = formData.get('projectId');
+    const file = formData.get('file') as File | null;
+    const projectId = formData.get('projectId') as string | null;
 
     if (!file || !projectId) {
       return NextResponse.json(
@@ -32,7 +32,7 @@ export async function POST(request) {
 
     // Generate unique filename
     const timestamp = Date.now();
-    const fileExtension = file.name.split('.').pop();
+    const fileExtension = file.name.split('.').pop() || 'png';
     const filename = `${timestamp}.${fileExtension}`;
     const filepath = join(projectImagesDir, filename);
 

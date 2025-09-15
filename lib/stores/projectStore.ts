@@ -1,11 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-const useProjectStore = create(
+interface ProjectStore {
+  activeProjectId: string | null;
+  setActiveProjectId: (id: string | null) => void;
+  clearActiveProject: () => void;
+}
+
+const useProjectStore = create<ProjectStore>()(
   persist(
     (set) => ({
       activeProjectId: null,
-      setActiveProjectId: (id) => set({ activeProjectId: id }),
+      setActiveProjectId: (id: string | null) => set({ activeProjectId: id }),
       clearActiveProject: () => set({ activeProjectId: null }),
     }),
     {

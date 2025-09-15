@@ -7,9 +7,24 @@ import Breadcrumb from './components/Breadcrumb';
 import useProjectStore from '../lib/stores/projectStore';
 import useThemeStore from '../lib/stores/themeStore';
 
+interface Project {
+  id: string;
+  title: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Declare global window property
+declare global {
+  interface Window {
+    openNewProjectModal?: () => void;
+  }
+}
+
 export default function Home() {
-  const [projects, setProjects] = useState([]);
-  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState<boolean>(false);
   const clearActiveProject = useProjectStore(state => state.clearActiveProject);
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
@@ -19,13 +34,13 @@ export default function Home() {
     fetchProjects();
   }, []);
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (): Promise<void> => {
     const response = await fetch('/api/projects');
-    const data = await response.json();
+    const data: Project[] = await response.json();
     setProjects(data);
   };
 
-  const handleProjectCreated = (newProject) => {
+  const handleProjectCreated = (newProject: Project): void => {
     // Add the new project to the list
     setProjects(prev => [...prev, newProject]);
   };

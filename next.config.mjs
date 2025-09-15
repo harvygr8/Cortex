@@ -9,11 +9,6 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ['faiss-node'],
-  },
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
   }
 };
 

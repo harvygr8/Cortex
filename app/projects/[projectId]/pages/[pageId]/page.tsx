@@ -12,16 +12,32 @@ import Loader from '../../../../components/Loader';
 import PageLoader from '../../../../components/PageLoader';
 import Breadcrumb from '../../../../components/Breadcrumb';
 
+interface Page {
+  id: string;
+  title: string;
+  content: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface Project {
+  id: string;
+  title: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export default function PageDetail() {
   const params = useParams();
   const router = useRouter();
-  const projectId = params.projectId;
-  const pageId = params.pageId;
-  const [page, setPage] = useState(null);
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const projectId = params.projectId as string;
+  const pageId = params.pageId as string;
+  const [page, setPage] = useState<Page | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   const setActiveProjectId = useProjectStore(state => state.setActiveProjectId);
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
@@ -33,7 +49,7 @@ export default function PageDetail() {
     }
   }, [projectId, pageId, setActiveProjectId]);
 
-  const fetchPageData = async () => {
+  const fetchPageData = async (): Promise<void> => {
     try {
       const [pageRes, projectRes] = await Promise.all([
         fetch(`/api/projects/${projectId}/pages/${pageId}`),
@@ -44,14 +60,14 @@ export default function PageDetail() {
         throw new Error('Failed to fetch page data');
       }
 
-      const [pageData, projectData] = await Promise.all([
+      const [pageData, projectData]: [Page, Project] = await Promise.all([
         pageRes.json(),
         projectRes.json()
       ]);
 
       setPage(pageData);
       setProject(projectData);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching page:', err);
       setError(err.message);
     } finally {
@@ -59,7 +75,7 @@ export default function PageDetail() {
     }
   };
 
-  const handleContentSave = async (newContent) => {
+  const handleContentSave = async (newContent: string): Promise<void> => {
     try {
       const response = await fetch(`/api/projects/${projectId}/pages/${pageId}`, {
         method: 'PUT',
@@ -68,7 +84,7 @@ export default function PageDetail() {
       });
 
       if (response.ok) {
-        const updatedPage = await response.json();
+        const updatedPage: Page = await response.json();
         setPage(updatedPage);
         setIsEditing(false);
       }
@@ -77,11 +93,11 @@ export default function PageDetail() {
     }
   };
 
-  const handleEditCancel = () => {
+  const handleEditCancel = (): void => {
     setIsEditing(false);
   };
 
-  const handlePageDeleted = () => {
+  const handlePageDeleted = (): void => {
     router.push('/');
   };
 

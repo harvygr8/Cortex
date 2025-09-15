@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ContextAgent } from '../../../lib/contextAgent';
 import ollamaStatus from '../../../lib/utils/ollamaStatus';
 import projectStore from '../../../lib/projectStore';
 
-let contextAgent;
+let contextAgent: ContextAgent | null = null;
 
-const initializeAgent = async () => {
+const initializeAgent = async (): Promise<ContextAgent> => {
   if (!contextAgent) {
     if (!await ollamaStatus.checkStatus()) {
       await ollamaStatus.start();
@@ -15,9 +15,14 @@ const initializeAgent = async () => {
   return contextAgent;
 };
 
-export async function POST(request) {
+interface ChatRequest {
+  question: string;
+  projectId: string;
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const { question, projectId } = await request.json();
+    const { question, projectId }: ChatRequest = await request.json();
     
     if (!projectId) {
       return NextResponse.json(

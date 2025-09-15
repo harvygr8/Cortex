@@ -3,6 +3,7 @@ import { Inter, PT_Sans, IBM_Plex_Sans } from 'next/font/google';
 import Sidebar from './components/Sidebar';
 import ThemeWrapper from './components/ThemeWrapper';
 import { Toaster } from 'react-hot-toast';
+import type { Metadata } from 'next';
 
 const inter = Inter({ subsets: ['latin'] });
 const ptSans = PT_Sans({ 
@@ -21,12 +22,16 @@ const ibmPlexSans = IBM_Plex_Sans({
   style: ['normal', 'italic']
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Cortex - AI-Enhanced Knowledge Hub',
   description: 'Local, AI-powered knowledge management system',
 };
 
-export default function RootLayout({ children }) {
+interface RootLayoutProps {
+  children: React.ReactNode;
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" className={`${ptSans.variable} ${ibmPlexSans.variable}`}>
       <head>

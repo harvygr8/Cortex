@@ -1,4 +1,4 @@
-import { SimpleBM25Retriever } from './simpleBM25.js';
+import { SimpleBM25Retriever } from './simpleBM25';
 
 export class HybridRetriever {
   constructor(vectorStore, documents = []) {
@@ -32,7 +32,7 @@ export class HybridRetriever {
   // Fetch full content from SQLite for BM25 initialization
   async fetchFullContentFromSQLite(documents) {
     try {
-      const projectStore = await import('./projectStore.js');
+      const projectStore = await import('./projectStore');
       const documentsWithContent = await Promise.all(
         documents.map(async (doc) => {
           const pageId = doc.metadata?.pageId || doc.metadata?.sqlitePageId;

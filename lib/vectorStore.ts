@@ -2,8 +2,8 @@ import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
 import { FaissStore } from "@langchain/community/vectorstores/faiss";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { ensureDir } from 'fs-extra';
-import { HybridRetriever } from './hybridRetriever.js';
-import fileLogger from './utils/fileLogger.js';
+import { HybridRetriever } from './hybridRetriever';
+import fileLogger from './utils/fileLogger';
 
 let instance = null;
 
@@ -73,7 +73,7 @@ export class ProjectVectorStore {
     await ensureDir('./data/vectors');
     
     // Fetch full content from SQLite for proper indexing
-    const projectStore = await import('./projectStore.js');
+    const projectStore = await import('./projectStore');
     const documentsWithContent = await Promise.all(
       project.pages.map(async (page) => {
         try {
@@ -247,7 +247,7 @@ export class ProjectVectorStore {
         // Since we can't easily reconstruct the original documents from the loaded index,
         // we'll need to get them from the project store
         try {
-          const projectStore = await import('./projectStore.js');
+          const projectStore = await import('./projectStore');
           const project = await projectStore.default.getProject(projectId);
           
           if (project && project.pages && project.pages.length > 0) {
@@ -361,7 +361,7 @@ export class ProjectVectorStore {
       
       try {
         // Try to reinitialize with project data
-        const projectStore = await import('./projectStore.js');
+        const projectStore = await import('./projectStore');
         const project = await projectStore.default.getProject(projectId);
         
         if (project && project.pages && project.pages.length > 0) {
@@ -438,7 +438,7 @@ export class ProjectVectorStore {
   // Retrieve full content from SQLite for search results
   async getContentFromSQLite(projectId, pageId) {
     try {
-      const projectStore = await import('./projectStore.js');
+      const projectStore = await import('./projectStore');
       const page = await projectStore.default.getPage(pageId);
       return page ? page.content : null;
     } catch (error) {
@@ -476,7 +476,7 @@ export class ProjectVectorStore {
       console.log(`[VectorStore] Validating data consistency for project ${projectId}`);
       
       // Get project data from SQLite
-      const projectStore = await import('./projectStore.js');
+      const projectStore = await import('./projectStore');
       const project = await projectStore.default.getProject(projectId);
       
       if (!project || !project.pages || project.pages.length === 0) {
@@ -550,7 +550,7 @@ export class ProjectVectorStore {
     console.log(`[VectorStore] Force reinitializing hybrid retriever for project ${projectId}`);
     
     try {
-      const projectStore = await import('./projectStore.js');
+      const projectStore = await import('./projectStore');
       const project = await projectStore.default.getProject(projectId);
       
       if (!project || !project.pages || project.pages.length === 0) {
@@ -607,7 +607,7 @@ export class ProjectVectorStore {
       const documents = documentsWithContent;
       
       // Create new hybrid retriever
-      const HybridRetriever = await import('./hybridRetriever.js');
+      const HybridRetriever = await import('./hybridRetriever');
       const hybridRetriever = new HybridRetriever.default(vectorStore, documents);
       await hybridRetriever.initializeBM25(documents);
       

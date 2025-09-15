@@ -798,7 +798,7 @@ ContextAgent.prototype.buildFocusedContext = function(relevantChunks, question, 
 // Get page content from SQLite
 ContextAgent.prototype.getPageContent = async function(pageId) {
   try {
-    const projectStore = await import('./projectStore.js');
+    const projectStore = await import('./projectStore');
     const page = await projectStore.default.getPage(pageId);
     return page ? page.content : null;
   } catch (error) {

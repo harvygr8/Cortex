@@ -1,12 +1,19 @@
 import { create } from 'zustand';
 import { colors } from '../colors';
 
-const useThemeStore = create((set) => ({
+interface ThemeStore {
+  isDarkMode: boolean;
+  colors: typeof colors;
+  fonts: any;
+  toggleTheme: () => void;
+}
+
+const useThemeStore = create<ThemeStore>((set) => ({
   isDarkMode: false,
   colors: colors,
   // Font configuration - accessible via theme.font
   fonts: colors.light.font, // Default to light mode fonts
-  toggleTheme: () => set((state) => {
+  toggleTheme: () => set((state: ThemeStore) => {
     const newIsDarkMode = !state.isDarkMode;
     // Update the document class for Tailwind dark mode
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {

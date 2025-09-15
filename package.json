@@ -49,8 +49,15 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.0",
+    "@types/node": "^20.0.0",
+    "@types/pdf-parse": "^1.1.1",
+    "@types/react": "^18.0.0",
+    "@types/react-beautiful-dnd": "^13.1.4",
+    "@types/react-dom": "^18.0.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.15"
+    "tailwindcss": "^3.4.15",
+    "typescript": "5.9.2"
   }
 }

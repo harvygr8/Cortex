@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import projectStore from '../../../lib/projectStore';
 
 export async function GET() {
@@ -15,9 +15,14 @@ export async function GET() {
   }
 }
 
-export async function POST(request) {
+interface CreateProjectRequest {
+  title: string;
+  description: string;
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const { title, description } = await request.json();
+    const { title, description }: CreateProjectRequest = await request.json();
     const project = await projectStore.addProject(title, description);
     return NextResponse.json(project);
   } catch (error) {
