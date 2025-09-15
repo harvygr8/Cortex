@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Edit, Trash2, Plus, Upload, RotateCcw, ClipboardList, FileText, Image as ImageIcon, ChevronRight, StickyNote, Box } from 'lucide-react';
+import { MessageSquare, Edit, Trash2, Plus, Upload, RotateCcw, ClipboardList, FileText, Image as ImageIcon, ChevronRight, StickyNote } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 
-export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, onAddPage, onImportData, onRegenerateVectors, onCreateTasks, onCreateScratchpad, onCreateImage, onCreateContainer }) {
+export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, onAddPage, onImportData, onRegenerateVectors, onCreateTasks, onCreateScratchpad, onCreateImage }) {
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
   const menuRef = useRef(null);
@@ -83,12 +83,6 @@ export default function ContextMenu({ x, y, onClose, onChat, onEdit, onDelete, o
       icon: Plus,
       label: 'Add Node',
       hasSubmenu: true,
-      color: theme.accent
-    },
-    {
-      icon: Box,
-      label: 'Add Container',
-      onClick: onCreateContainer,
       color: theme.accent
     },
     {

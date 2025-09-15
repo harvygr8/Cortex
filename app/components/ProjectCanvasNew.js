@@ -7,10 +7,12 @@ import ReactFlow, {
   useNodesState, 
   useEdgesState, 
   addEdge,
-  ReactFlowProvider 
+  ReactFlowProvider,
+  useReactFlow
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { toast } from 'react-hot-toast';
+import { Container } from 'lucide-react';
 import useThemeStore from '../../lib/stores/themeStore';
 import ContextMenu from './ContextMenu';
 import ChatContextMenu from './ChatContextMenu';
@@ -54,6 +56,7 @@ function ProjectCanvasFlow({ projects }) {
   // React Flow state
   const [nodes, setNodes, reactFlowOnNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const { screenToFlowPosition } = useReactFlow();
   
   // App state
   const [projectPages, setProjectPages] = useState({});
@@ -204,15 +207,16 @@ function ProjectCanvasFlow({ projects }) {
   // Pane context menu handler (right-click on empty canvas)
   const handlePaneContextMenu = useCallback((event) => {
     event.preventDefault();
+    const flowPosition = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
     setPaneContextMenu({
       x: event.clientX,
       y: event.clientY,
-      position: {
-        x: event.clientX,
-        y: event.clientY
-      }
+      position: flowPosition
     });
-  }, []);
+  }, [screenToFlowPosition]);
 
   // Chat context menu handlers
   const handleChatContextMenu = useCallback((e, chatCard) => {
@@ -1986,76 +1990,118 @@ function ProjectCanvasFlow({ projects }) {
 
   // Container manipulation functions
   const updateContainerLabel = useCallback(async (containerId, newLabel) => {
-    try {
+    console.log('ProjectCanvasNew: updateContainerLabel called with:', containerId, newLabel);
+    
+    // Get current nodes from state instead of closure
+    setNodes(currentNodes => {
       const containerNodeId = `container-${containerId}`;
-      const containerNode = nodes.find(n => n.id === containerNodeId);
-      if (!containerNode) return;
+      console.log('ProjectCanvasNew: Looking for container node with ID:', containerNodeId);
+      const containerNode = currentNodes.find(n => n.id === containerNodeId);
+      console.log('ProjectCanvasNew: Found container node:', containerNode);
       
+      if (!containerNode) {
+        console.error('ProjectCanvasNew: Container node not found!');
+        console.error('ProjectCanvasNew: Available node IDs:', currentNodes.map(n => n.id));
+        return currentNodes; // Return unchanged nodes
+      }
+      
+      // Update the container label
       const projectId = containerNode.data.containerCard.projectId;
+      console.log('ProjectCanvasNew: Project ID:', projectId);
       
-      const response = await fetch(`/api/projects/${projectId}/containers/${containerId}`, {
+      // Make API call
+      fetch(`/api/projects/${projectId}/containers/${containerId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ label: newLabel }),
+      }).then(response => {
+        console.log('ProjectCanvasNew: API response status:', response.status);
+        if (response.ok) {
+          console.log('ProjectCanvasNew: API call successful, updating nodes...');
+          setNodes(prevNodes => prevNodes.map(node => 
+            node.id === containerNodeId 
+              ? { 
+                  ...node, 
+                  data: { 
+                    ...node.data, 
+                    label: newLabel,
+                    containerCard: { ...node.data.containerCard, label: newLabel }
+                  } 
+                }
+              : node
+          ));
+          console.log('ProjectCanvasNew: Nodes updated successfully');
+        } else {
+          console.error('ProjectCanvasNew: API call failed with status:', response.status);
+        }
+      }).catch(error => {
+        console.error('Error updating container label:', error);
       });
       
-      if (response.ok) {
-        setNodes(prev => prev.map(node => 
-          node.id === containerNodeId 
-            ? { 
-                ...node, 
-                data: { 
-                  ...node.data, 
-                  label: newLabel,
-                  containerCard: { ...node.data.containerCard, label: newLabel }
-                } 
-              }
-            : node
-        ));
-      }
-    } catch (error) {
-      console.error('Error updating container label:', error);
-      toast.error('Failed to update container label');
-    }
-  }, [nodes, setNodes]);
+      return currentNodes; // Return unchanged nodes for now
+    });
+  }, [setNodes]);
 
   const updateContainerColor = useCallback(async (containerId, newColor) => {
-    try {
+    console.log('ProjectCanvasNew: updateContainerColor called with:', containerId, newColor);
+    console.log('ProjectCanvasNew: updateContainerColor function started');
+    
+    // Get current nodes from state instead of closure
+    setNodes(currentNodes => {
+      console.log('ProjectCanvasNew: Current nodes array length:', currentNodes.length);
+      console.log('ProjectCanvasNew: All node IDs:', currentNodes.map(n => n.id));
+      
       const containerNodeId = `container-${containerId}`;
-      const containerNode = nodes.find(n => n.id === containerNodeId);
-      if (!containerNode) return;
+      console.log('ProjectCanvasNew: Looking for container node with ID:', containerNodeId);
+      const containerNode = currentNodes.find(n => n.id === containerNodeId);
+      console.log('ProjectCanvasNew: Found container node:', containerNode);
       
+      if (!containerNode) {
+        console.error('ProjectCanvasNew: Container node not found!');
+        console.error('ProjectCanvasNew: Available node IDs:', currentNodes.map(n => n.id));
+        return currentNodes; // Return unchanged nodes
+      }
+      
+      // Update the container color
       const projectId = containerNode.data.containerCard.projectId;
+      console.log('ProjectCanvasNew: Project ID:', projectId);
       
-      const response = await fetch(`/api/projects/${projectId}/containers/${containerId}`, {
+      // Make API call
+      fetch(`/api/projects/${projectId}/containers/${containerId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ color: newColor }),
+      }).then(response => {
+        console.log('ProjectCanvasNew: API response status:', response.status);
+        if (response.ok) {
+          console.log('ProjectCanvasNew: API call successful, updating nodes...');
+          setNodes(prevNodes => prevNodes.map(node => 
+            node.id === containerNodeId 
+              ? { 
+                  ...node, 
+                  data: { 
+                    ...node.data, 
+                    color: newColor,
+                    containerCard: { ...node.data.containerCard, color: newColor }
+                  } 
+                }
+              : node
+          ));
+          console.log('ProjectCanvasNew: Nodes updated successfully');
+        } else {
+          console.error('ProjectCanvasNew: API call failed with status:', response.status);
+        }
+      }).catch(error => {
+        console.error('Error updating container color:', error);
       });
       
-      if (response.ok) {
-        setNodes(prev => prev.map(node => 
-          node.id === containerNodeId 
-            ? { 
-                ...node, 
-                data: { 
-                  ...node.data, 
-                  color: newColor,
-                  containerCard: { ...node.data.containerCard, color: newColor }
-                } 
-              }
-            : node
-        ));
-      }
-    } catch (error) {
-      console.error('Error updating container color:', error);
-      toast.error('Failed to update container color');
-    }
-  }, [nodes, setNodes]);
+      return currentNodes; // Return unchanged nodes for now
+    });
+  }, [setNodes]);
 
   const updateContainerSize = useCallback(async (containerId, newWidth, newHeight) => {
     console.log('updateContainerSize called:', containerId, newWidth, newHeight);
@@ -2123,26 +2169,51 @@ function ProjectCanvasFlow({ projects }) {
   }, [setNodes]);
 
   const deleteContainer = useCallback(async (containerId) => {
-    try {
+    console.log('ProjectCanvasNew: deleteContainer called with:', containerId);
+    console.log('ProjectCanvasNew: deleteContainer function started at:', new Date().toISOString());
+    
+    // Get current nodes from state instead of closure
+    setNodes(currentNodes => {
       const containerNodeId = `container-${containerId}`;
-      const containerNode = nodes.find(n => n.id === containerNodeId);
-      if (!containerNode) return;
+      console.log('ProjectCanvasNew: Looking for container node with ID:', containerNodeId);
+      const containerNode = currentNodes.find(n => n.id === containerNodeId);
+      console.log('ProjectCanvasNew: Found container node:', containerNode);
       
+      if (!containerNode) {
+        console.error('ProjectCanvasNew: Container node not found!');
+        console.error('ProjectCanvasNew: Available node IDs:', currentNodes.map(n => n.id));
+        return currentNodes; // Return unchanged nodes
+      }
+      
+      // Delete the container
       const projectId = containerNode.data.containerCard.projectId;
+      console.log('ProjectCanvasNew: Project ID:', projectId);
       
-      const response = await fetch(`/api/projects/${projectId}/containers/${containerId}`, {
+      // Make API call
+      fetch(`/api/projects/${projectId}/containers/${containerId}`, {
         method: 'DELETE',
+      }).then(response => {
+        console.log('ProjectCanvasNew: API response status:', response.status);
+        if (response.ok) {
+          console.log('ProjectCanvasNew: API call successful, removing container from nodes...');
+          setNodes(prevNodes => prevNodes.filter(node => node.id !== containerNodeId));
+          console.log('ProjectCanvasNew: Showing success toast');
+          toast.success('Container deleted');
+          console.log('ProjectCanvasNew: Container removed successfully');
+        } else {
+          console.error('ProjectCanvasNew: API call failed with status:', response.status);
+          console.log('ProjectCanvasNew: Showing error toast from response not ok');
+          toast.error('Failed to delete container');
+        }
+      }).catch(error => {
+        console.error('Error deleting container:', error);
+        console.log('ProjectCanvasNew: Showing error toast from catch block');
+        toast.error('Failed to delete container');
       });
       
-      if (response.ok) {
-        setNodes(prev => prev.filter(node => node.id !== containerNodeId));
-        toast.success('Container deleted');
-      }
-    } catch (error) {
-      console.error('Error deleting container:', error);
-      toast.error('Failed to delete container');
-    }
-  }, [nodes, setNodes]);
+      return currentNodes; // Return unchanged nodes for now
+    });
+  }, [setNodes]);
 
   // Create container
   const createContainer = useCallback(async (position) => {
@@ -2655,6 +2726,8 @@ function ProjectCanvasFlow({ projects }) {
         console.error('Error saving project node position:', error);
       }
     } else if (node.type === 'containerNode' && node.data.containerCard) {
+      console.log('ProjectCanvasNew: onNodeDragStop called for containerNode:', node.id);
+      console.log('ProjectCanvasNew: Container position:', node.position);
       try {
         await fetch(`/api/projects/${node.data.containerCard.projectId}/containers/${node.data.containerCard.id}`, {
           method: 'PATCH',
@@ -2756,17 +2829,13 @@ function ProjectCanvasFlow({ projects }) {
         >
           <button
             onClick={() => {
-              // Convert screen coordinates to canvas coordinates
-              const canvasPosition = {
-                x: paneContextMenu.position.x - 150, // Offset to center container on cursor
-                y: paneContextMenu.position.y - 100
-              };
-              createContainer(canvasPosition);
+              // Use the exact click position (already converted to flow coordinates)
+              createContainer(paneContextMenu.position);
               handleClosePaneContextMenu();
             }}
             className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors cursor-pointer`}
           >
-            <div className={`w-4 h-4 ${theme.accent}`}>📦</div>
+            <Container className={`w-4 h-4 ${theme.accent}`} />
             <span className={`text-sm ${theme.text}`}>Add Container</span>
           </button>
         </div>

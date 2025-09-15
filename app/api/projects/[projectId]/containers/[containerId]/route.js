@@ -28,14 +28,20 @@ export async function PATCH(request, { params }) {
     const { containerId } = params;
     const body = await request.json();
     
+    console.log('API: PATCH request for container:', containerId);
+    console.log('API: Request body:', body);
+    
     let updatedContainer = null;
     
     if (body.label !== undefined) {
+      console.log('API: Updating container label');
       updatedContainer = await projectStore.updateContainerLabel(containerId, body.label);
     }
     
     if (body.color !== undefined) {
+      console.log('API: Updating container color to:', body.color);
       updatedContainer = await projectStore.updateContainerColor(containerId, body.color);
+      console.log('API: Color update result:', updatedContainer);
     }
     
     if (body.positionX !== undefined && body.positionY !== undefined) {

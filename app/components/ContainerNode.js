@@ -16,6 +16,7 @@ const ContainerNode = memo(({ id, data, selected }) => {
   const [isResizing, setIsResizing] = useState(false);
   const containerColor = data.color || '#3b82f6';
   const containerRef = useRef(null);
+  const colorPickerRef = useRef(null);
   
   //
   
@@ -35,22 +36,61 @@ const ContainerNode = memo(({ id, data, selected }) => {
   const handleLabelSubmit = () => {
     setIsEditing(false);
     if (data.onUpdateLabel) {
-      data.onUpdateLabel(id, label);
+      const containerId = id.replace('container-', '');
+      data.onUpdateLabel(containerId, label);
     }
   };
 
   const handleColorChange = (color) => {
+    console.log('ContainerNode: handleColorChange called with color:', color);
+    console.log('ContainerNode: Current containerColor:', containerColor);
+    console.log('ContainerNode: Container ID:', id);
+    console.log('ContainerNode: data.onUpdateColor exists:', !!data.onUpdateColor);
+    console.log('ContainerNode: data.onUpdateColor function:', data.onUpdateColor);
+    
     setShowColorPicker(false);
     if (data.onUpdateColor) {
-      data.onUpdateColor(id, color);
+      console.log('ContainerNode: About to call data.onUpdateColor with:', id, color);
+      console.log('ContainerNode: Function type:', typeof data.onUpdateColor);
+      try {
+        const containerId = id.replace('container-', '');
+        console.log('ContainerNode: Calling data.onUpdateColor with parameters:', containerId, color);
+        const result = data.onUpdateColor(containerId, color);
+        console.log('ContainerNode: data.onUpdateColor call completed, result:', result);
+        if (result && typeof result.then === 'function') {
+          console.log('ContainerNode: data.onUpdateColor returned a promise');
+          result.then(() => console.log('ContainerNode: Promise resolved')).catch(err => console.error('ContainerNode: Promise rejected:', err));
+        }
+      } catch (error) {
+        console.error('ContainerNode: Error calling data.onUpdateColor:', error);
+      }
+    } else {
+      console.error('ContainerNode: data.onUpdateColor is not defined!');
     }
   };
 
   const handleDelete = () => {
     if (data.onDelete) {
-      data.onDelete(id);
+      const containerId = id.replace('container-', '');
+      data.onDelete(containerId);
     }
   };
+
+  // Close color picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    if (showColorPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showColorPicker]);
 
 
 
@@ -114,11 +154,12 @@ const ContainerNode = memo(({ id, data, selected }) => {
           <div className="relative">
             <button
               onClick={(e) => {
+                console.log('ContainerNode: Color picker button clicked, current state:', showColorPicker);
                 e.stopPropagation();
                 setShowColorPicker(!showColorPicker);
               }}
               onMouseDown={(e) => e.stopPropagation()}
-              className={`p-1 rounded hover:bg-black/10 transition-colors`}
+              className={`p-1 rounded hover:bg-black/10 transition-colors nodrag`}
               title="Change color"
             >
               <Palette className="w-3 h-3" style={{ color: containerColor }} />
@@ -127,15 +168,23 @@ const ContainerNode = memo(({ id, data, selected }) => {
             {/* Color picker dropdown */}
             {showColorPicker && (
               <div 
-                className={`absolute top-6 right-0 ${theme.background2} border ${theme.border} rounded-lg shadow-lg p-2 z-50`}
+                ref={colorPickerRef}
+                className={`absolute top-6 right-0 ${theme.background2} border ${theme.border} rounded-lg shadow-lg p-2 z-50 nodrag`}
                 style={{ minWidth: '120px' }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
               >
                 <div className="grid grid-cols-5 gap-1">
                   {predefinedColors.map((color) => (
                     <button
                       key={color}
-                      onClick={() => handleColorChange(color)}
-                      className={`w-6 h-6 rounded border-2 hover:scale-110 transition-transform ${
+                      onClick={(e) => {
+                        console.log('ContainerNode: Color button clicked:', color);
+                        e.stopPropagation();
+                        handleColorChange(color);
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className={`w-6 h-6 rounded border-2 hover:scale-110 transition-transform nodrag ${
                         color === containerColor ? 'border-white shadow-lg' : 'border-gray-300'
                       }`}
                       style={{ backgroundColor: color }}
