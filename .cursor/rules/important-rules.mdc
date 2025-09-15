@@ -60,6 +60,7 @@ React/Next.js → third-party libraries → internal components → types → re
 - Wrap expensive components with `React.memo`
 - Clean up event listeners in `useEffect` cleanup functions
 - Use proper dependency arrays in hooks
+- **ALWAYS** use custom Tooltip component (`app/components/Tooltip.tsx`) for tooltips - never use browser default tooltips
 
 ## Canvas & React Flow
 - Canvas nodes use proper TypeScript typing with node data interfaces

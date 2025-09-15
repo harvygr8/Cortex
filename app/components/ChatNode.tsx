@@ -128,8 +128,8 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
 
         {/* Query Section */}
         <div className="mb-4 mt-2">
-          <h4 className={`text-xs font-semibold ${theme.secondary} mb-2 uppercase tracking-wide underline`}>
-            Question
+          <h4 className={`text-xs font-semibold ${theme.text} mb-2 uppercase tracking-wide`}>
+            <span className={`px-2 py-1 rounded ${theme.background}`}>Question</span>
           </h4>
           <p className={`text-sm ${theme.text} leading-relaxed`}>
             {chatCard.query}
@@ -138,8 +138,8 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
 
         {/* Response Section */}
         <div className="flex-1 overflow-y-auto">
-          <h4 className={`text-xs font-semibold ${theme.secondary} mb-2 uppercase tracking-wide underline`}>
-            Answer
+          <h4 className={`text-xs font-semibold ${theme.text} mb-2 uppercase tracking-wide pt-1`}>
+            <span className={`px-2 py-1 rounded ${theme.background}`}>Answer</span>
           </h4>
           <div className={`text-sm ${theme.text} leading-relaxed prose prose-sm max-w-none ${isDarkMode ? 'prose-invert' : ''}`}>
             <ReactMarkdown 

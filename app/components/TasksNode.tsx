@@ -275,24 +275,14 @@ const TasksNode = memo(({ data, isConnectable, selected }: any) => {
 
         {/* Task Input Section */}
         <div className="mb-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Add a new task..."
-              className={`flex-1 px-3 py-2 rounded text-sm border ${theme.input} focus:outline-none focus:ring-2 ${theme.focusRing} focus:border-transparent`}
-            />
-            <button
-              onClick={addTask}
-              disabled={!newTask.trim()}
-              className={`px-3 py-2 rounded text-sm font-medium ${theme.button} disabled:opacity-50 hover:opacity-80 transition-opacity flex items-center gap-1`}
-            >
-              <Plus className="w-3 h-3" />
-              Add
-            </button>
-          </div>
+          <input
+            type="text"
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Add a new task..."
+            className={`w-full px-3 py-2 rounded text-sm border ${theme.input} focus:outline-none focus:ring-2 ${theme.focusRing} focus:border-transparent`}
+          />
         </div>
 
         {/* Tasks List Section */}
@@ -319,7 +309,7 @@ const TasksNode = memo(({ data, isConnectable, selected }: any) => {
                     onClick={() => toggleTask(task.id)}
                     className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
                       task.completed
-                        ? `${theme.statusIndicator} text-white`
+                        ? `${theme.button} text-white`
                         : `${theme.border} ${theme.hover} border-2`
                     }`}
                   >
