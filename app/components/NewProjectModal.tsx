@@ -3,9 +3,12 @@ import React from 'react';
 
 import { useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
-import Modal from './Modal';
-import useThemeStore from '../../lib/stores/themeStore';
-import { getHeadingClasses, getLabelClasses } from '../../lib/utils/fontUtils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -17,8 +20,6 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
-  const { isDarkMode, colors, fonts } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +52,7 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
       onClose();
     } catch (error) {
       console.error('Error creating project:', error);
-      alert('Failed to create project. Please try again.');
+      toast.error('Failed to create project. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -66,75 +67,77 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <h1 className={`${getHeadingClasses('h1')} mb-2 ${theme.text}`}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="sm:max-w-[550px]">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-2xl font-semibold">
             Create New Project
-          </h1>
-          <p className={`${theme.secondary}`}>
-            Start organizing your knowledge with a new project.
-          </p>
-        </div>
+          </DialogTitle>
+          <DialogDescription className="text-base">
+            Start organizing your knowledge with a new project. Give it a descriptive title and description.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-6 py-4">
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-sm font-medium">
+                Project Title <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Research Notes, Personal Wiki..."
+                required
+                autoFocus
+                className="h-11"
+              />
+            </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className={`block ${getLabelClasses()} ${theme.text} mb-2`}>
-              Project Title *
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className={`w-full px-4 py-3 rounded-lg border ${theme.input} focus:ring-2 focus:ring-blue-500 focus:outline-none`}
-              placeholder="Enter project title..."
-              required
-              autoFocus
-            />
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-sm font-medium">
+                Description <span className="text-muted-foreground text-xs">(optional)</span>
+              </Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                placeholder="Describe what this project is about and what you'll use it for..."
+                className="resize-none"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className={`block ${getLabelClasses()} ${theme.text} mb-2`}>
-              Description (optional)
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className={`w-full px-4 py-3 rounded-lg border resize-none ${theme.input} focus:ring-2 focus:ring-blue-500 focus:outline-none`}
-              placeholder="Describe what this project is about..."
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={saving}
-            className={`px-6 py-3 rounded-lg border ${theme.border} ${theme.secondary} hover:opacity-80 transition-opacity disabled:opacity-50`}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving || !title.trim()}
-            className={`px-6 py-3 rounded-lg flex items-center gap-2 ${theme.button} hover:opacity-80 transition-opacity disabled:opacity-50`}
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Plus className="w-5 h-5" />
-                Create Project
-              </>
-            )}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              className="min-w-[100px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="min-w-[140px]"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Create Project
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

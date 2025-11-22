@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ReactFlow, { 
   Controls, 
   useNodesState, 
@@ -20,21 +20,36 @@ import ReactFlow, {
   OnNodesDelete
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { toast } from 'react-hot-toast';
-import { Container } from 'lucide-react';
+import { toast } from 'sonner';
+import { Container, Plus } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import useThemeStore from '../../lib/stores/themeStore';
+import useSettingsStore from '../../lib/stores/settingsStore';
 import ContextMenu from './ContextMenu';
 import ChatContextMenu from './ChatContextMenu';
 import TasksContextMenu from './TasksContextMenu';
+import ImageContextMenu from './ImageContextMenu';
 import ChatModal from './ChatModal';
 import AddPageModal from './AddPageModal';
 import PageModal from './PageModal';
+import NewProjectModal from './NewProjectModal';
 import ProjectNode from './ProjectNode';
 import ChatNode from './ChatNode';
 import TasksNode from './TasksNode';
 import ScratchpadNode from './ScratchpadNode';
 import ImageNode from './ImageNode';
 import ContainerNode from './ContainerNode';
+import SpotlightSearch from './SpotlightSearch';
+import Loader from './Loader';
 import type { 
   Project, 
   ChatCard, 
@@ -55,11 +70,12 @@ import type {
 } from '../../types';
 
 // Default card and grid settings
+const DEFAULT_PROJECT_NODE_WIDTH = 520; // Increased for better spacing
 const DEFAULT_CARD_WIDTH = 420;
 const DEFAULT_CARD_HEIGHT = 320;
 const GRID_COLUMNS = 3;
-const GRID_H_GAP = 100;
-const GRID_V_GAP = 100;
+const GRID_H_GAP = 120; // Increased gap for wider nodes
+const GRID_V_GAP = 120; // Increased gap for taller nodes
 
 // Custom node types for React Flow
 const nodeTypes = {
@@ -72,9 +88,26 @@ const nodeTypes = {
 };
 
 // React Flow wrapper component
-function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
-  const { isDarkMode, colors } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
+function ProjectCanvasFlow({ 
+  projects, 
+  onProjectCreated 
+}: { 
+  projects: Project[];
+  onProjectCreated?: (project: Project) => void;
+}) {
+  const { isDarkMode } = useThemeStore();
+  const {
+    edgeType,
+    edgeColor,
+    edgeWidth,
+    edgeAnimated,
+    initializeSettings,
+  } = useSettingsStore();
+  
+  // Initialize settings on mount
+  useEffect(() => {
+    initializeSettings();
+  }, [initializeSettings]);
   
   // Detect OS for pan key (Cmd on Mac, Ctrl on Windows/Linux)
   const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -82,7 +115,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
   
   // React Flow state
   const [nodes, setNodes, reactFlowOnNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, reactFlowOnEdgesChange] = useEdgesState([]);
   const { screenToFlowPosition } = useReactFlow();
   
   // App state
@@ -96,15 +129,83 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
   const [chatModal, setChatModal] = useState<ContextMenuState | null>(null);
   const [addPageModal, setAddPageModal] = useState<{ isOpen: boolean; project?: Project } | null>(null);
   const [pageModal, setPageModal] = useState<PageModalState | null>(null);
+  const [newProjectModal, setNewProjectModal] = useState<{ isOpen: boolean }>({ isOpen: false });
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
   const [containers, setContainers] = useState<ContainerCard[]>([]);
   const [selectedContainer, setSelectedContainer] = useState<ContainerCard | null>(null);
   const [containerNodeMap, setContainerNodeMap] = useState<Map<string, string>>(new Map());
   const [isConnecting, setIsConnecting] = useState(false);
+  const [deleteProjectDialog, setDeleteProjectDialog] = useState<{ isOpen: boolean; project?: Project }>({ isOpen: false });
   
   // Track positions for debounced saving
   const savePositionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastNodesRef = useRef<any[]>([]);
+
+  // Normalize edges to ensure they have solid style (no strokeDasharray) and use settings
+  const normalizeEdges = useCallback((edgesToNormalize: Edge[]): Edge[] => {
+    return edgesToNormalize.map(edge => {
+      const normalizedEdge = { ...edge };
+      if (normalizedEdge.style) {
+        // Explicitly remove strokeDasharray if it exists
+        const { strokeDasharray, ...restStyle } = normalizedEdge.style;
+        normalizedEdge.style = {
+          ...restStyle,
+          stroke: restStyle.stroke || (isDarkMode ? edgeColor.dark : edgeColor.light),
+          strokeWidth: restStyle.strokeWidth || edgeWidth
+        };
+        // Ensure strokeDasharray is completely removed
+        if ('strokeDasharray' in normalizedEdge.style) {
+          delete (normalizedEdge.style as any).strokeDasharray;
+        }
+      } else {
+        normalizedEdge.style = {
+          stroke: isDarkMode ? edgeColor.dark : edgeColor.light,
+          strokeWidth: edgeWidth
+        };
+      }
+      // Use edge type from settings
+      normalizedEdge.type = edgeType;
+      // Use animation setting
+      normalizedEdge.animated = edgeAnimated;
+      return normalizedEdge;
+    });
+  }, [isDarkMode, edgeType, edgeColor, edgeWidth, edgeAnimated]);
+
+  // Helper function to create an edge with current settings
+  const createEdge = useCallback((source: string, target: string, sourceHandle?: string, targetHandle?: string, id?: string): Edge => {
+    return {
+      id: id || `edge-${source}-${target}`,
+      source,
+      target,
+      sourceHandle,
+      targetHandle,
+      type: edgeType,
+      style: {
+        stroke: isDarkMode ? edgeColor.dark : edgeColor.light,
+        strokeWidth: edgeWidth
+      },
+      animated: edgeAnimated
+    };
+  }, [edgeType, edgeColor, edgeWidth, edgeAnimated, isDarkMode]);
+
+  // Wrap onEdgesChange to normalize edges after React Flow updates them
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    reactFlowOnEdgesChange(changes);
+    // After React Flow processes the changes, normalize all edges
+    // Use setTimeout to ensure state has updated
+    setTimeout(() => {
+      setEdges((currentEdges) => {
+        const needsNormalization = currentEdges.some(edge => 
+          edge.style?.strokeDasharray !== undefined
+        );
+        if (needsNormalization) {
+          return normalizeEdges(currentEdges);
+        }
+        return currentEdges;
+      });
+    }, 0);
+  }, [reactFlowOnEdgesChange, setEdges, normalizeEdges]);
 
   // Function to save multiple node positions
   const saveNodePositions = useCallback(async (nodesToSave: any[]) => {
@@ -473,10 +574,15 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
     }
   }, []);
 
-  const handleDeleteProject = useCallback(async (project: Project) => {
-    if (!confirm(`Are you sure you want to delete "${project.title}"? This action cannot be undone.`)) {
-      return;
-    }
+  const openDeleteProjectDialog = useCallback((project: Project) => {
+    setDeleteProjectDialog({ isOpen: true, project });
+  }, []);
+
+  const confirmDeleteProject = useCallback(async () => {
+    const project = deleteProjectDialog.project;
+    if (!project) return;
+    
+    setDeleteProjectDialog({ isOpen: false });
     
     try {
       const response = await fetch(`/api/projects/${project.id}`, {
@@ -513,7 +619,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
       console.error('Error deleting project:', error);
       toast.error('Failed to delete project. Please try again.');
     }
-  }, [setNodes, setEdges]);
+  }, [deleteProjectDialog.project, setNodes, setEdges]);
 
   // Chat context menu action handlers
   const handleCopyResponse = useCallback((chatCard: ChatCard) => {
@@ -803,20 +909,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
                 }
               }
               
-              const edge = {
-                id: `edge-${sourceNodeId}-${chatNodeId}`,
-                source: sourceNodeId,
-                target: chatNodeId,
-                sourceHandle,
-                targetHandle,
-                type: 'smoothstep',
-                style: { 
-                  stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-                  strokeWidth: 2,
-                  strokeDasharray: '5,5'
-                },
-                animated: true
-              };
+              const edge = createEdge(sourceNodeId, chatNodeId, sourceHandle, targetHandle, `edge-${sourceNodeId}-${chatNodeId}`);
               edges.push(edge);
             });
           }
@@ -889,20 +982,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
                 }
               }
               
-              const edge = {
-                id: `edge-${sourceNodeId}-${taskNodeId}`,
-                source: sourceNodeId,
-                target: taskNodeId,
-                sourceHandle,
-                targetHandle,
-                type: 'smoothstep',
-                style: { 
-                  stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-                  strokeWidth: 2,
-                  strokeDasharray: '5,5'
-                },
-                animated: true
-              };
+              const edge = createEdge(sourceNodeId, taskNodeId, sourceHandle, targetHandle, `edge-${sourceNodeId}-${taskNodeId}`);
               edges.push(edge);
             });
           }
@@ -975,20 +1055,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
                 }
               }
               
-              const edge = {
-                id: `edge-${sourceNodeId}-${scratchpadNodeId}`,
-                source: sourceNodeId,
-                target: scratchpadNodeId,
-                sourceHandle,
-                targetHandle,
-                type: 'smoothstep',
-                style: { 
-                  stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-                  strokeWidth: 2,
-                  strokeDasharray: '5,5'
-                },
-                animated: true
-              };
+              const edge = createEdge(sourceNodeId, scratchpadNodeId, sourceHandle, targetHandle, `edge-${sourceNodeId}-${scratchpadNodeId}`);
               edges.push(edge);
             });
           }
@@ -1062,20 +1129,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
                 }
               }
               
-              const edge = {
-                id: `edge-${sourceNodeId}-${imageNodeId}`,
-                source: sourceNodeId,
-                target: imageNodeId,
-                sourceHandle,
-                targetHandle,
-                type: 'smoothstep',
-                style: { 
-                  stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-                  strokeWidth: 2,
-                  strokeDasharray: '5,5'
-                },
-                animated: true
-              };
+              const edge = createEdge(sourceNodeId, imageNodeId, sourceHandle, targetHandle, `edge-${sourceNodeId}-${imageNodeId}`);
               edges.push(edge);
             });
           }
@@ -1142,11 +1196,50 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
           const row = Math.floor(index / GRID_COLUMNS);
           const col = index % GRID_COLUMNS;
           position = { 
-            x: col * (DEFAULT_CARD_WIDTH + GRID_H_GAP), 
+            x: col * (DEFAULT_PROJECT_NODE_WIDTH + GRID_H_GAP), 
             y: row * (DEFAULT_CARD_HEIGHT + GRID_V_GAP) 
           };
           console.log(`[ProjectCanvas] Using default position for project ${project.id}:`, position);
         }
+        
+        // Calculate dynamic height based on pages - generous estimate for title wrapping
+        const pages = projectPages[project.id] || [];
+        const calculateNodeHeight = () => {
+          // Header height calculation - account for project title and description wrapping
+          const baseHeaderHeight = 80;
+          const projectTitleHeightPerLine = 32; // Height per line of project title (text-2xl)
+          const projectTitleMaxLines = 3; // Allow up to 3 lines for project title
+          const descriptionHeightPerLine = 24; // Height per line of description
+          const descriptionMaxLines = 3; // Allow up to 3 lines for description
+          const headerPadding = 40; // py-5 = 20px top + 20px bottom
+          
+          // Estimate header height based on potential wrapping
+          const estimatedHeaderHeight = baseHeaderHeight + 
+            (projectTitleHeightPerLine * (projectTitleMaxLines - 1)) + 
+            (project.description ? descriptionHeightPerLine * descriptionMaxLines : 0) + 
+            headerPadding;
+          
+          const minContentHeight = 240;
+          const baseCardHeight = 100;
+          const titleHeightPerLine = 24;
+          const pageBlockGap = 16;
+          const contentPaddingTop = 24;
+          const contentPaddingBottom = 24;
+          const cardPadding = 24;
+          
+          if (pages.length === 0) {
+            return estimatedHeaderHeight + minContentHeight + cardPadding;
+          }
+          
+          const rows = Math.ceil(pages.length / 2);
+          // Estimate with buffer for title wrapping (2 extra lines)
+          const estimatedCardHeight = baseCardHeight + (titleHeightPerLine * 2);
+          const contentHeight = (rows * estimatedCardHeight) + ((rows - 1) * pageBlockGap) + contentPaddingTop + contentPaddingBottom;
+          const totalHeight = estimatedHeaderHeight + contentHeight + cardPadding;
+          
+          // No max limit - ensure all pages are visible
+          return Math.max(400, totalHeight);
+        };
         
         const projectNode = {
           id: `project-${project.id}`,
@@ -1154,14 +1247,14 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
           position,
           data: { 
             project,
-            pages: projectPages[project.id] || [],
+            pages: pages,
             onContextMenu: handleContextMenu,
             onPageClick: (pageId: string, action: string) => handlePageClick(pageId, action, project),
             isConnecting
           },
           style: { 
-            width: DEFAULT_CARD_WIDTH, 
-            height: DEFAULT_CARD_HEIGHT 
+            width: DEFAULT_PROJECT_NODE_WIDTH, 
+            height: calculateNodeHeight()
           }
         };
         projectNodes.push(projectNode);
@@ -1171,12 +1264,104 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
       // Containers first (behind other nodes), then regular nodes
       setNodes([...containerNodes, ...projectNodes, ...chatNodes, ...taskNodes, ...scratchpadNodes, ...imageNodes]);
       
-      // Replace all edges to prevent duplicates
-      setEdges(edges);
+      // Replace all edges to prevent duplicates (normalized to ensure solid style)
+      setEdges(normalizeEdges(edges));
     };
     
     loadPersistedData();
-  }, [hasInitialized, projects, projectPages]);
+  }, [hasInitialized, projects, normalizeEdges]);
+
+  // Always normalize edges before rendering to ensure solid style
+  // This ensures any edges (new or existing) are always displayed correctly
+  const normalizedEdges = useMemo(() => {
+    return normalizeEdges(edges);
+  }, [edges, normalizeEdges]);
+
+  // Always ensure edges state is normalized (update if needed)
+  const edgesUpdateRef = useRef(false);
+  useEffect(() => {
+    if (edges.length === 0) return;
+    
+    const hasOldStyle = edges.some(edge => 
+      edge.style?.strokeDasharray !== undefined ||
+      edge.type === 'smoothstep'
+    );
+    
+    if (hasOldStyle && !edgesUpdateRef.current) {
+      console.log('[ProjectCanvas] Normalizing edges state to remove dashed style');
+      edgesUpdateRef.current = true;
+      const normalized = normalizeEdges(edges);
+      setEdges(normalized);
+      // Reset flag after update
+      setTimeout(() => {
+        edgesUpdateRef.current = false;
+      }, 100);
+    }
+  }, [edges, normalizeEdges, setEdges]);
+
+  // Update project nodes' pages data when projectPages changes (without recreating nodes)
+  useEffect(() => {
+    const calculateNodeHeight = (pages: any[], project: Project) => {
+      // Header height calculation - account for project title and description wrapping
+      const baseHeaderHeight = 80;
+      const projectTitleHeightPerLine = 32; // Height per line of project title (text-2xl)
+      const projectTitleMaxLines = 3; // Allow up to 3 lines for project title
+      const descriptionHeightPerLine = 24; // Height per line of description
+      const descriptionMaxLines = 3; // Allow up to 3 lines for description
+      const headerPadding = 40; // py-5 = 20px top + 20px bottom
+      
+      // Estimate header height based on potential wrapping
+      const estimatedHeaderHeight = baseHeaderHeight + 
+        (projectTitleHeightPerLine * (projectTitleMaxLines - 1)) + 
+        (project.description ? descriptionHeightPerLine * descriptionMaxLines : 0) + 
+        headerPadding;
+      
+      const minContentHeight = 240;
+      const baseCardHeight = 100;
+      const titleHeightPerLine = 24;
+      const pageBlockGap = 16;
+      const contentPaddingTop = 24;
+      const contentPaddingBottom = 24;
+      const cardPadding = 24;
+      
+      if (pages.length === 0) {
+        return estimatedHeaderHeight + minContentHeight + cardPadding;
+      }
+      
+      const rows = Math.ceil(pages.length / 2);
+      // Estimate with buffer for title wrapping (2 extra lines)
+      const estimatedCardHeight = baseCardHeight + (titleHeightPerLine * 2);
+      const contentHeight = (rows * estimatedCardHeight) + ((rows - 1) * pageBlockGap) + contentPaddingTop + contentPaddingBottom;
+      const totalHeight = estimatedHeaderHeight + contentHeight + cardPadding;
+      
+      // No max limit - ensure all pages are visible
+      return Math.max(400, totalHeight);
+    };
+
+    setNodes(prevNodes => 
+      prevNodes.map(node => {
+        if (node.type === 'projectNode' && node.data.project) {
+          const projectId = node.data.project.id;
+          const updatedPages = projectPages[projectId] || [];
+          const project = node.data.project;
+          const newHeight = calculateNodeHeight(updatedPages, project);
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              pages: updatedPages
+            },
+            style: {
+              ...node.style,
+              width: DEFAULT_PROJECT_NODE_WIDTH,
+              height: newHeight
+            }
+          };
+        }
+        return node;
+      })
+    );
+  }, [projectPages, setNodes]);
 
   // Update node handlers when they change
   useEffect(() => {
@@ -1461,20 +1646,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
       };
       
       // Create edge connection with smart handle selection
-      const newEdge = {
-        id: `edge-${sourceNodeId}-${chatNodeId}`,
-        source: sourceNodeId,
-        target: chatNodeId,
-        sourceHandle,
-        targetHandle,
-        type: 'smoothstep',
-        style: { 
-          stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-          strokeWidth: 2,
-          strokeDasharray: '5,5'
-        },
-        animated: true
-      };
+      const newEdge = createEdge(sourceNodeId, chatNodeId, sourceHandle, targetHandle, `edge-${sourceNodeId}-${chatNodeId}`);
       
       // Update state
       setNodes(prev => [...prev, newChatNode]);
@@ -1660,11 +1832,10 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
       target: taskNodeId,
       sourceHandle,
       targetHandle,
-      type: 'smoothstep',
+      type: 'default',
       style: { 
-        stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-        strokeWidth: 2,
-        strokeDasharray: '5,5'
+        stroke: isDarkMode ? '#6b7280' : '#4b5563',
+        strokeWidth: 2
       },
       animated: true
     };
@@ -1843,20 +2014,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
     };
     
     // Create edge connection using calculated handles
-    const newEdge = {
-      id: `edge-${sourceNodeId}-${scratchpadNodeId}`,
-      source: sourceNodeId,
-      target: scratchpadNodeId,
-      sourceHandle,
-      targetHandle,
-      type: 'smoothstep',
-      style: { 
-        stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-        strokeWidth: 2,
-        strokeDasharray: '5,5'
-      },
-      animated: true
-    };
+    const newEdge = createEdge(sourceNodeId, scratchpadNodeId, sourceHandle, targetHandle, `edge-${sourceNodeId}-${scratchpadNodeId}`);
     
     setNodes(prev => [...prev, newScratchpadNode]);
     setEdges(prev => [...prev, newEdge]);
@@ -2040,11 +2198,10 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
       target: imageNodeId,
       sourceHandle,
       targetHandle,
-      type: 'smoothstep',
+      type: 'default',
       style: { 
-        stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-        strokeWidth: 2,
-        strokeDasharray: '5,5'
+        stroke: isDarkMode ? '#6b7280' : '#4b5563',
+        strokeWidth: 2
       },
       animated: true
     };
@@ -2357,6 +2514,28 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
     }
   }, [projects, setNodes, updateContainerLabel, updateContainerColor, updateContainerSize, startContainerResize, deleteContainer]);
 
+  // Flash a node when selected from search
+  const flashNode = useCallback((nodeId: string, pageId?: string) => {
+    // Set flashing state
+    setNodes(prevNodes => 
+      prevNodes.map(node => 
+        node.id === nodeId 
+          ? { ...node, data: { ...node.data, isFlashing: true, flashingPageId: pageId } }
+          : node
+      )
+    );
+
+    // Clear flashing state after 1.5 seconds (two flashes)
+    setTimeout(() => {
+      setNodes(prevNodes => 
+        prevNodes.map(node => 
+          node.id === nodeId 
+            ? { ...node, data: { ...node.data, isFlashing: false, flashingPageId: undefined } }
+            : node
+        )
+      );
+    }, 1500);
+  }, [setNodes]);
 
   // Helper function to check if a child node is already connected to a project
   const isChildNodeAlreadyConnected = useCallback((targetNodeId: string) => {
@@ -2388,16 +2567,13 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
     
     // Add the edge visually
     setEdges((eds) => {
-      const newEdge = {
-        ...params,
-        type: 'smoothstep',
-        style: { 
-          stroke: isDarkMode ? '#3b82f6' : '#2563eb',
-          strokeWidth: 2,
-          strokeDasharray: '5,5'
-        },
-        animated: true
-      };
+      const newEdge = createEdge(
+        params.source || '',
+        params.target || '',
+        params.sourceHandle,
+        params.targetHandle,
+        params.id
+      );
       return addEdge(newEdge, eds);
     });
     
@@ -2821,26 +2997,37 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
     }
   }, []);
 
-  if (!projects.length) {
-    return (
-      <div className={`p-8 rounded-lg shadow-sm ${theme.background2} max-w-md mx-auto mt-20`}>
-        <h3 className={`text-xl font-semibold font-ibm-plex-sans ${theme.text}`}>
-          Welcome to Cortex!
-        </h3>
-        <p className={`mt-2 ${theme.secondary}`}>
-          Create your first project to start organizing your knowledge.
-        </p>
-      </div>
-    );
+  // Track when projects have been loaded
+  useEffect(() => {
+    if (projects.length >= 0) {
+      setProjectsLoaded(true);
+    }
+  }, [projects]);
+
+  // Show loader while initializing when projects exist
+  if (projects.length > 0 && !hasInitialized) {
+    return <Loader text="Loading canvas..." />;
+  }
+
+  // Show loader when projects haven't been loaded yet
+  if (!projectsLoaded) {
+    return <Loader text="Loading..." />;
   }
 
   return (
     <div className="w-full h-screen relative selection-enabled">
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={normalizedEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        defaultEdgeOptions={{
+          type: edgeType,
+          style: {
+            strokeWidth: edgeWidth,
+          },
+          animated: edgeAnimated,
+        }}
         onConnect={onConnect}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
@@ -2874,8 +3061,25 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
         selectionMode={SelectionMode.Partial}
         selectionKeyCode={null}
       >
-        <Controls />
+        {/* <Controls /> */}
       </ReactFlow>
+
+      {/* Empty canvas message when no projects */}
+      {projects.length === 0 && projectsLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-background/80 backdrop-blur-sm border border-foreground/25 rounded-lg p-6 max-w-md text-center pointer-events-auto">
+            <h3 className="text-xl font-semibold text-foreground mb-2">
+              No projects yet
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Create your first project to start organizing your knowledge.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Spotlight Search */}
+      <SpotlightSearch onNodeFlash={flashNode} />
 
       {/* Context Menu */}
       {contextMenu && (
@@ -2893,14 +3097,14 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
           onEdit={() => {
             contextMenu.project && (window.location.href = `/projects/${contextMenu.project.id}`);
           }}
-          onDelete={() => contextMenu.project && handleDeleteProject(contextMenu.project)}
+          onDelete={() => contextMenu.project && openDeleteProjectDialog(contextMenu.project)}
         />
       )}
 
       {/* Pane Context Menu */}
       {paneContextMenu && (
         <div
-          className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
+          className="fixed z-50 bg-card border border-border rounded-lg py-2 w-48"
           style={{
             left: paneContextMenu.x,
             top: paneContextMenu.y,
@@ -2908,14 +3112,24 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
         >
           <button
             onClick={() => {
+              setNewProjectModal({ isOpen: true });
+              handleClosePaneContextMenu();
+            }}
+            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-foreground">Create New Project</span>
+          </button>
+          <button
+            onClick={() => {
               // Use the exact click position (already converted to flow coordinates)
               paneContextMenu.position && createContainer(paneContextMenu.position);
               handleClosePaneContextMenu();
             }}
-            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors cursor-pointer`}
+            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer"
           >
-            <Container className={`w-4 h-4 ${theme.accent}`} />
-            <span className={`text-sm ${theme.text}`}>Add Container</span>
+            <Container className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-foreground">Add Container</span>
           </button>
         </div>
       )}
@@ -2948,7 +3162,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
       {/* Scratchpad Context Menu */}
       {scratchpadContextMenu && (
         <div
-          className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
+          className="fixed z-50 bg-card border border-border rounded-lg py-2 w-48"
           style={{
             left: scratchpadContextMenu.x,
             top: scratchpadContextMenu.y,
@@ -2959,7 +3173,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
               scratchpadContextMenu.scratchpadCard && deleteScratchpadNode(scratchpadContextMenu.scratchpadCard.id);
               handleCloseScratchpadContextMenu();
             }}
-            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors text-red-500`}
+            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors text-destructive"
           >
             Delete scratchpad
           </button>
@@ -2968,7 +3182,7 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
               scratchpadContextMenu.scratchpadCard && handleDetachNode(scratchpadContextMenu.scratchpadCard.id, 'scratchpadNode');
               handleCloseScratchpadContextMenu();
             }}
-            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors ${theme.text}`}
+            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors text-foreground"
           >
             Detach from project
           </button>
@@ -2977,32 +3191,17 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
 
       {/* Image Context Menu */}
       {imageContextMenu && (
-        <div
-          className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
-          style={{
-            left: imageContextMenu.x,
-            top: imageContextMenu.y,
+        <ImageContextMenu
+          x={imageContextMenu.x}
+          y={imageContextMenu.y}
+          onClose={handleCloseImageContextMenu}
+          onDelete={() => {
+            imageContextMenu.imageCard && deleteImageNode(imageContextMenu.imageCard.id);
           }}
-        >
-          <button
-            onClick={() => {
-              imageContextMenu.imageCard && deleteImageNode(imageContextMenu.imageCard.id);
-              handleCloseImageContextMenu();
-            }}
-            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors text-red-500`}
-          >
-            Delete image
-          </button>
-          <button
-            onClick={() => {
-              imageContextMenu.imageCard && handleDetachNode(imageContextMenu.imageCard.id, 'imageNode');
-              handleCloseImageContextMenu();
-            }}
-            className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors ${theme.text}`}
-          >
-            Detach from project
-          </button>
-        </div>
+          onDetach={() => {
+            imageContextMenu.imageCard && handleDetachNode(imageContextMenu.imageCard.id, 'imageNode');
+          }}
+        />
       )}
 
       {/* Chat Modal */}
@@ -3054,15 +3253,52 @@ function ProjectCanvasFlow({ projects }: { projects: Project[] }) {
         />
       )}
 
+      {/* New Project Modal */}
+      <NewProjectModal
+        isOpen={newProjectModal.isOpen}
+        onClose={() => setNewProjectModal({ isOpen: false })}
+        onProjectCreated={(project: Project) => {
+          setNewProjectModal({ isOpen: false });
+          // Call the parent callback to refresh the projects list
+          if (onProjectCreated) {
+            onProjectCreated(project);
+          }
+        }}
+      />
+
+      {/* Delete Project Confirmation Dialog */}
+      <AlertDialog open={deleteProjectDialog.isOpen} onOpenChange={(open) => !open && setDeleteProjectDialog({ isOpen: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteProjectDialog.project?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
 
 // Main exported component with ReactFlowProvider
-export default function ProjectCanvas({ projects }: { projects: Project[] }) {
+export default function ProjectCanvas({ 
+  projects, 
+  onProjectCreated 
+}: { 
+  projects: Project[];
+  onProjectCreated?: (project: Project) => void;
+}) {
   return (
     <ReactFlowProvider>
-      <ProjectCanvasFlow projects={projects} />
+      <ProjectCanvasFlow projects={projects} onProjectCreated={onProjectCreated} />
     </ReactFlowProvider>
   );
 }

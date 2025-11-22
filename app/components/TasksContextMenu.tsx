@@ -3,11 +3,9 @@ import React from 'react';
 
 import { memo, useEffect, useRef } from 'react';
 import { FileText, Trash2, Unlink } from 'lucide-react';
-import useThemeStore from '../../lib/stores/themeStore';
+import { Button } from '@/components/ui/button';
 
 const TasksContextMenu = memo(({ x, y, onClose, onDelete, onExportTasks, onDetach }: any) => {
-  const { isDarkMode, colors } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,48 +47,33 @@ const TasksContextMenu = memo(({ x, y, onClose, onDelete, onExportTasks, onDetac
       style={{ left: x, top: y }}
       onClick={handleClick}
     >
-      <div className={`
-        py-2 rounded-lg shadow-lg border
-        ${theme.background2} ${theme.border}
-        min-w-[160px]
-      `}>
-        <button
+      <div className="py-2 rounded-lg border bg-popover border-border w-48">
+        <Button
+          variant="ghost"
           onClick={() => handleAction(onExportTasks)}
-          className={`
-            w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2
-            ${theme.hover}
-            ${theme.text}
-          `}
+          className="w-full justify-start px-4 py-2 h-auto"
         >
           <FileText className="w-4 h-4" />
           Export Tasks
-        </button>
+        </Button>
         
-        <button
+        <Button
+          variant="ghost"
           onClick={() => handleAction(onDetach)}
-          className={`
-            w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2
-            ${theme.hover}
-            ${theme.text}
-          `}
+          className="w-full justify-start px-4 py-2 h-auto"
         >
           <Unlink className="w-4 h-4" />
           Detach from project
-        </button>
+        </Button>
         
-        <div className={`border-t ${theme.border} my-1`} />
-        
-        <button
+        <Button
+          variant="ghost"
           onClick={() => handleAction(onDelete)}
-          className={`
-            w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2
-            ${theme.dangerHover}
-            ${theme.danger}
-          `}
+          className="w-full justify-start px-4 py-2 h-auto text-destructive hover:text-destructive"
         >
           <Trash2 className="w-4 h-4" />
           Delete Task List
-        </button>
+        </Button>
       </div>
     </div>
   );

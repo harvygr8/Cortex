@@ -3,12 +3,13 @@ import React from 'react';
 
 import { memo, useState, useEffect, useRef } from 'react';
 import { Handle, Position } from 'reactflow';
-import { StickyNote, X, Save } from 'lucide-react';
-import useThemeStore from '../../lib/stores/themeStore';
-
+import { StickyNote, Trash2 } from 'lucide-react';
+import { Card, CardHeader, CardContent, CardTitle, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
-  const { isDarkMode, colors } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
   const { scratchpadCard, onDelete, onContextMenu, isConnecting } = data;
 
   const [text, setText] = useState(scratchpadCard.text || '');
@@ -86,16 +87,16 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
     <div 
       className="scratchpad-node relative"
       onContextMenu={handleContextMenu}
-      style={{ minWidth: '420px', minHeight: '320px' }}
+      style={{ minWidth: '550px', minHeight: '420px' }}
     >
-      <div className={`
-        p-4 rounded-lg shadow-md transition-all
-        h-full flex flex-col w-full relative
-        ${theme.background2}
-        border-2 ${selected 
-          ? 'border-blue-500 ring-2 ring-blue-300/50' 
-          : theme.border
+      <Card className={`
+        h-full flex flex-col w-full transition-all duration-200
+        border-foreground/25 hover:border-primary/50
+        ${selected 
+          ? 'ring-2 ring-primary' 
+          : 'hover:ring-1 hover:ring-muted'
         }
+        ${data.isFlashing ? 'node-flashing' : ''}
       `}>
         {/* Target handles positioned on the card boundaries - only visible when selected */}
         <Handle
@@ -104,10 +105,10 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
           id="scratchpad-input-left"
           isConnectable={isConnectable}
           style={{ 
-            background: '#3b82f6',
+            background: 'hsl(var(--primary))',
             width: '12px',
             height: '12px',
-            border: '2px solid white',
+            border: '2px solid hsl(var(--background))',
             left: '-6px',
             top: '50%',
             transform: 'translateY(-50%)',
@@ -121,10 +122,10 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
           id="scratchpad-input-right"
           isConnectable={isConnectable}
           style={{ 
-            background: '#3b82f6',
+            background: 'hsl(var(--primary))',
             width: '12px',
             height: '12px',
-            border: '2px solid white',
+            border: '2px solid hsl(var(--background))',
             right: '-6px',
             top: '50%',
             transform: 'translateY(-50%)',
@@ -138,10 +139,10 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
           id="scratchpad-input-top"
           isConnectable={isConnectable}
           style={{ 
-            background: '#3b82f6',
+            background: 'hsl(var(--primary))',
             width: '12px',
             height: '12px',
-            border: '2px solid white',
+            border: '2px solid hsl(var(--background))',
             top: '-6px',
             left: '50%',
             transform: 'translateX(-50%)',
@@ -155,10 +156,10 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
           id="scratchpad-input-bottom"
           isConnectable={isConnectable}
           style={{ 
-            background: '#3b82f6',
+            background: 'hsl(var(--primary))',
             width: '12px',
             height: '12px',
-            border: '2px solid white',
+            border: '2px solid hsl(var(--background))',
             bottom: '-6px',
             left: '50%',
             transform: 'translateX(-50%)',
@@ -167,56 +168,61 @@ const ScratchpadNode = memo(({ data, isConnectable, selected }: any) => {
           }}
         />
 
-        {/* Scratchpad Header */}
-        <div className="flex justify-between items-start mb-4 cursor-move">
-          <h3 className={`text-lg font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} line-clamp-1 ${theme.text} flex items-center gap-2`}>
-            <StickyNote className={`w-4 h-4 ${theme.accent}`} />
-            Scratchpad
-          </h3>
-          <div className="flex items-center gap-2">
-            {isSaving && (
-              <div className="flex items-center gap-1">
-                <Save className={`w-3 h-3 ${theme.secondary} animate-pulse`} />
-                <span className={`text-xs ${theme.secondary}`}>Saving...</span>
-              </div>
-            )}
-            <button
-              onClick={() => onDelete(scratchpadCard.id)}
-              className={`text-sm ${theme.secondary} hover:text-red-500 transition-colors`}
-            >
-              <X className="w-3 h-3" />
-            </button>
+        {/* Header */}
+        <CardHeader className="pb-3 cursor-move">
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <StickyNote className="w-5 h-5" />
+              Scratchpad
+            </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(scratchpadCard.id)}
+                  className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete Scratchpad</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
-        </div>
+        </CardHeader>
 
-        {/* Text Area */}
-        <div className="flex-1 flex flex-col">
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleTextChange}
-            placeholder="Start writing your notes here..."
-            className={`
-              flex-1 w-full p-3 rounded border resize-none text-sm
-              ${theme.input} 
-              focus:outline-none focus:ring-2 ${theme.focusRing} focus:border-transparent
-              ${remainingChars < 50 ? 'border-yellow-400 focus:ring-yellow-400' : ''}
-              ${remainingChars === 0 ? 'border-red-400 focus:ring-red-400' : ''}
-            `}
-            style={{ minHeight: '200px' }}
-          />
-          
-          {/* Character Counter */}
-          <div className={`mt-2 flex justify-end items-center text-xs`}>
-            <span className={`
-              ${remainingChars < 50 ? 'text-yellow-600' : theme.secondary}
-              ${remainingChars === 0 ? 'text-red-600 font-medium' : ''}
-            `}>
-              {text.length}/{MAX_CHARS} characters
-            </span>
+        {/* Content */}
+        <CardContent className="flex-1 overflow-hidden pt-4 px-6">
+          <div className="h-full flex flex-col">
+            <Textarea
+              ref={textareaRef}
+              value={text}
+              onChange={handleTextChange}
+              placeholder="Start writing your thoughts here"
+              className={`
+                flex-1 resize-none border-foreground/25 hover:border-primary/50 focus-visible:border-primary/50 text-base leading-relaxed
+                ${remainingChars < 50 && remainingChars > 0 ? 'text-yellow-600' : ''}
+                ${remainingChars === 0 ? 'text-destructive' : ''}
+              `}
+              style={{ minHeight: '380px' }}
+            />
           </div>
-        </div>
-      </div>
+        </CardContent>
+
+        {/* Footer with Character Counter */}
+        <CardFooter className="pt-3">
+          <div className="flex items-center w-full">
+            <Badge 
+              variant={remainingChars === 0 ? "destructive" : remainingChars < 50 ? "outline" : "secondary"}
+              className="text-xs"
+            >
+              {text.length}/{MAX_CHARS}
+            </Badge>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 });

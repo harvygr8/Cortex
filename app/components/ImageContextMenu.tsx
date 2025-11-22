@@ -2,28 +2,24 @@
 import React from 'react';
 
 import { useEffect, useRef } from 'react';
-import { Trash2, Copy, Download, Unlink } from 'lucide-react';
+import { Trash2, Unlink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface ChatContextMenuProps {
+interface ImageContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
   onDelete: () => void;
-  onCopyResponse: () => void;
-  onExportToFile: () => void;
   onDetach: () => void;
 }
 
-export default function ChatContextMenu({ 
+export default function ImageContextMenu({ 
   x, 
   y, 
   onClose, 
-  onDelete, 
-  onCopyResponse, 
-  onExportToFile,
+  onDelete,
   onDetach
-}: ChatContextMenuProps) {
+}: ImageContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,18 +46,6 @@ export default function ChatContextMenu({
 
   const menuItems = [
     {
-      icon: Copy,
-      label: 'Copy response',
-      onClick: onCopyResponse,
-      isDestructive: false
-    },
-    {
-      icon: Download,
-      label: 'Export to file',
-      onClick: onExportToFile,
-      isDestructive: false
-    },
-    {
       icon: Unlink,
       label: 'Detach from project',
       onClick: onDetach,
@@ -69,7 +53,7 @@ export default function ChatContextMenu({
     },
     {
       icon: Trash2,
-      label: 'Delete chat',
+      label: 'Delete image',
       onClick: onDelete,
       isDestructive: true
     }
@@ -102,3 +86,4 @@ export default function ChatContextMenu({
     </div>
   );
 }
+

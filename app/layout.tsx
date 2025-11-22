@@ -1,25 +1,14 @@
 import './globals.css';
-import { Inter, PT_Sans, IBM_Plex_Sans } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import Sidebar from './components/Sidebar';
 import ThemeWrapper from './components/ThemeWrapper';
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Metadata } from 'next';
 
-const inter = Inter({ subsets: ['latin'] });
-const ptSans = PT_Sans({ 
+const inter = Inter({ 
   subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-pt-sans',
-  weight: ['400', '700'],
-  style: ['normal', 'italic']
-});
-
-const ibmPlexSans = IBM_Plex_Sans({ 
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-ibm-plex-sans',
-  weight: ['300', '400', '500', '600', '700'],
-  style: ['normal', 'italic']
+  variable: '--font-sans',
 });
 
 export const metadata: Metadata = {
@@ -33,18 +22,36 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className={`${ptSans.variable} ${ibmPlexSans.variable}`}>
-      <head>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-      </head>
-      <body className={inter.className}>
-        <ThemeWrapper>
-          <Sidebar />
-          <main className="ml-20">
-            {children}
-          </main>
-        </ThemeWrapper>
-        <Toaster position="bottom-right" />
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function getThemePreference() {
+                  const saved = localStorage.getItem('theme');
+                  if (saved) return saved;
+                  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                const theme = getThemePreference();
+                if (theme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              })();
+            `,
+          }}
+        />
+        <TooltipProvider>
+          <ThemeWrapper>
+            <Sidebar />
+            <main className="ml-16">
+              {children}
+            </main>
+          </ThemeWrapper>
+          <Toaster />
+        </TooltipProvider>
       </body>
     </html>
   );

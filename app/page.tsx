@@ -5,7 +5,6 @@ import ProjectCanvas from './components/ProjectCanvasNew';
 import NewProjectModal from './components/NewProjectModal';
 import Breadcrumb from './components/Breadcrumb';
 import useProjectStore from '../lib/stores/projectStore';
-import useThemeStore from '../lib/stores/themeStore';
 
 interface Project {
   id: string;
@@ -26,8 +25,6 @@ export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState<boolean>(false);
   const clearActiveProject = useProjectStore(state => state.clearActiveProject);
-  const { isDarkMode, colors } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
 
   useEffect(() => {
     clearActiveProject();
@@ -55,7 +52,7 @@ export default function Home() {
 
   return (
     <div className="w-full h-screen">
-      <ProjectCanvas projects={projects} />
+      <ProjectCanvas projects={projects} onProjectCreated={handleProjectCreated} />
       <NewProjectModal 
         isOpen={isNewProjectModalOpen}
         onClose={() => setIsNewProjectModalOpen(false)}

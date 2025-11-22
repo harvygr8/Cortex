@@ -104,48 +104,6 @@ export interface ChatResponse {
   warning?: string | null;
 }
 
-export interface ThemeColors {
-  background: string;
-  background2: string;
-  text: string;
-  secondary: string;
-  button: string;
-  border: string;
-  hover: string;
-  accent: string;
-  input: string;
-  sidebar: string;
-  sidebarIcon: string;
-  sidebarLogo: string;
-  navbar: string;
-  warning: string;
-  danger: string;
-  chatBubble: {
-    user: string;
-    ai: string;
-  };
-  statusIndicator: string;
-  statusText: string;
-  focusRing: string;
-  modal: {
-    background: string;
-    text: string;
-  };
-  overlay: string;
-  dangerHover: string;
-  font: {
-    primary: string;
-    heading: string;
-    body: string;
-    label: string;
-  };
-}
-
-export interface Theme {
-  light: ThemeColors;
-  dark: ThemeColors;
-}
-
 export interface NodePosition {
   x: number;
   y: number;

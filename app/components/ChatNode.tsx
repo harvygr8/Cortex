@@ -2,11 +2,13 @@
 
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { MessageSquare, X } from 'lucide-react';
+import { MessageSquare, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import useThemeStore from '../../lib/stores/themeStore';
-import SourceBadge from './SourceBadge';
 import type { ChatCard } from '../../types';
 
 interface ChatNodeData {
@@ -14,11 +16,11 @@ interface ChatNodeData {
   onDelete: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, chatCard: ChatCard) => void;
   isConnecting?: boolean;
+  isFlashing?: boolean;
 }
 
 const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData>) => {
-  const { isDarkMode, colors } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
+  const { isDarkMode } = useThemeStore();
   const { chatCard, onDelete, onContextMenu, isConnecting } = data;
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -34,14 +36,14 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
       onContextMenu={handleContextMenu}
       style={{ minWidth: '420px', minHeight: '320px' }}
     >
-      <div className={`
-        p-4 rounded-lg shadow-md transition-all
-        h-full flex flex-col w-full relative
-        ${theme.background2}
-        border-2 ${selected 
-          ? 'border-blue-500 ring-2 ring-blue-300/50' 
-          : theme.border
+      <Card className={`
+        h-full flex flex-col w-full transition-all duration-200
+        border-foreground/25 hover:border-primary/50
+        ${selected 
+          ? 'ring-2 ring-primary' 
+          : 'hover:ring-1 hover:ring-muted'
         }
+        ${data.isFlashing ? 'node-flashing' : ''}
       `}>
         {/* Target handles positioned on the card boundaries - only visible when selected */}
         <Handle
@@ -50,10 +52,10 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
           id="chat-input-left"
           isConnectable={isConnectable}
           style={{ 
-            background: '#3b82f6',
+            background: 'hsl(var(--primary))',
             width: '12px',
             height: '12px',
-            border: '2px solid white',
+            border: '2px solid hsl(var(--background))',
             left: '-6px',
             top: '50%',
             transform: 'translateY(-50%)',
@@ -67,10 +69,10 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
           id="chat-input-right"
           isConnectable={isConnectable}
           style={{ 
-            background: '#3b82f6',
+            background: 'hsl(var(--primary))',
             width: '12px',
             height: '12px',
-            border: '2px solid white',
+            border: '2px solid hsl(var(--background))',
             right: '-6px',
             top: '50%',
             transform: 'translateY(-50%)',
@@ -84,10 +86,10 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
           id="chat-input-top"
           isConnectable={isConnectable}
           style={{ 
-            background: '#3b82f6',
+            background: 'hsl(var(--primary))',
             width: '12px',
             height: '12px',
-            border: '2px solid white',
+            border: '2px solid hsl(var(--background))',
             top: '-6px',
             left: '50%',
             transform: 'translateX(-50%)',
@@ -101,10 +103,10 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
           id="chat-input-bottom"
           isConnectable={isConnectable}
           style={{ 
-            background: '#3b82f6',
+            background: 'hsl(var(--primary))',
             width: '12px',
             height: '12px',
-            border: '2px solid white',
+            border: '2px solid hsl(var(--background))',
             bottom: '-6px',
             left: '50%',
             transform: 'translateX(-50%)',
@@ -112,84 +114,90 @@ const ChatNode = memo(({ data, isConnectable, selected }: NodeProps<ChatNodeData
             visibility: (selected || isConnecting) ? 'visible' : 'hidden'
           }}
         />
-        {/* Chat Header */}
-        <div className="flex justify-between items-start mb-4 cursor-move">
-          <h3 className={`text-lg font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} line-clamp-1 ${theme.text} flex items-center gap-2`}>
-            <MessageSquare className={`w-4 h-4 ${theme.accent}`} />
-            Q/A
-          </h3>
-          <button
-            onClick={() => onDelete(chatCard.id)}
-            className={`text-sm ${theme.secondary} hover:text-red-500 transition-colors`}
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
+        {/* Header */}
+        <CardHeader className="pb-3 cursor-move">
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Q/A
+            </CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(chatCard.id)}
+                  className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete Chat</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </CardHeader>
 
-        {/* Query Section */}
-        <div className="mb-4 mt-2">
-          <h4 className={`text-xs font-semibold ${theme.text} mb-2 uppercase tracking-wide`}>
-            <span className={`px-2 py-1 rounded ${theme.background}`}>Question</span>
-          </h4>
-          <p className={`text-sm ${theme.text} leading-relaxed`}>
+        {/* Content */}
+        <CardContent className="flex-1 overflow-hidden pt-3 px-6 pb-4">
+          {/* Question */}
+          <p className="text-base font-bold leading-relaxed text-foreground mb-2">
             {chatCard.query}
           </p>
-        </div>
 
-        {/* Response Section */}
-        <div className="flex-1 overflow-y-auto">
-          <h4 className={`text-xs font-semibold ${theme.text} mb-2 uppercase tracking-wide pt-1`}>
-            <span className={`px-2 py-1 rounded ${theme.background}`}>Answer</span>
-          </h4>
-          <div className={`text-sm ${theme.text} leading-relaxed prose prose-sm max-w-none ${isDarkMode ? 'prose-invert' : ''}`}>
+          {/* Answer */}
+          <div className={`text-sm leading-relaxed prose prose-sm max-w-none ${isDarkMode ? 'prose-invert' : ''} prose-headings:mt-0 prose-headings:mb-2 prose-p:my-0 prose-ul:my-0 prose-ol:my-0`}>
             <ReactMarkdown 
               remarkPlugins={[remarkGfm]}
               components={{
-                // Custom styling for markdown elements
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                h1: ({ children }) => <h1 className={`text-lg font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} mb-2 ${theme.text}`}>{children}</h1>,
-                h2: ({ children }) => <h2 className={`text-base font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} mb-2 ${theme.text}`}>{children}</h2>,
-                h3: ({ children }) => <h3 className={`text-sm font-semibold ${theme.font?.heading || 'font-ibm-plex-sans'} mb-1 ${theme.text}`}>{children}</h3>,
-                ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-                li: ({ children }) => <li className="text-sm">{children}</li>,
+                p: ({ children }) => <p className="mb-2 last:mb-0 text-foreground">{children}</p>,
+                h1: ({ children }) => <h1 className="text-lg font-semibold mb-2 mt-0 text-foreground">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-base font-semibold mb-2 mt-0 text-foreground">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm font-semibold mb-1 mt-0 text-foreground">{children}</h3>,
+                ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1 text-foreground">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1 text-foreground">{children}</ol>,
+                li: ({ children }) => <li className="text-sm text-foreground">{children}</li>,
                 code: ({ children, className }) => {
                   const isInline = !className;
                   return isInline ? (
-                    <code className={`px-1 py-0.5 rounded text-xs ${theme.background} ${theme.text} border`}>
+                    <code className="px-1.5 py-0.5 rounded text-xs bg-muted border text-foreground">
                       {children}
                     </code>
                   ) : (
-                    <pre className={`p-2 rounded text-xs ${theme.background} ${theme.text} border overflow-x-auto`}>
-                      <code>{children}</code>
+                    <pre className="p-3 rounded text-xs bg-muted border overflow-x-auto">
+                      <code className="text-foreground">{children}</code>
                     </pre>
                   );
                 },
                 blockquote: ({ children }) => (
-                  <blockquote className={`border-l-4 ${theme.border} pl-3 py-1 my-2 ${theme.secondary} italic`}>
+                  <blockquote className="border-l-4 border-primary/30 pl-4 py-2 my-2 text-muted-foreground italic">
                     {children}
                   </blockquote>
                 ),
-                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                em: ({ children }) => <em className="italic">{children}</em>,
+                strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                em: ({ children }) => <em className="italic text-foreground">{children}</em>,
               }}
             >
               {chatCard.response}
             </ReactMarkdown>
           </div>
-          
-          {/* Sources Section */}
+            
+          {/* Sources */}
           {chatCard.sources && chatCard.sources.length > 0 && (
-            <div className="mt-3 pt-3">
-              <div className="flex flex-wrap gap-1.5">
-                {chatCard.sources.map((source: any, idx: number) => (
-                  <SourceBadge key={idx} source={source} />
-                ))}
-              </div>
+            <div className="flex flex-col gap-1.5 mt-6">
+              {chatCard.sources.map((source: any, idx: number) => {
+                const sourceText = typeof source === 'string' ? source : source.title || 'Unknown source';
+                return (
+                  <p key={idx} className="text-sm leading-relaxed text-muted-foreground">
+                    {sourceText}
+                  </p>
+                );
+              })}
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 });

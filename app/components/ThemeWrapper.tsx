@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import useThemeStore from '../../lib/stores/themeStore';
 
 interface ThemeWrapperProps {
@@ -9,22 +9,16 @@ interface ThemeWrapperProps {
 }
 
 export default function ThemeWrapper({ children }: ThemeWrapperProps) {
-  const [isClient, setIsClient] = useState(false);
-  const { isDarkMode, colors } = useThemeStore();
+  const { initializeTheme } = useThemeStore();
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Don't render theme-dependent content until client-side
-  if (!isClient) {
-    return <div className="min-h-screen">{children}</div>;
-  }
-
-  const currentTheme = isDarkMode ? colors.dark : colors.light;
+    // Sync Zustand store with the theme that was set by the script in layout.tsx
+    // This ensures the store state matches the actual DOM state
+    initializeTheme();
+  }, [initializeTheme]);
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${currentTheme.background} ${currentTheme.text}`}>
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
       {children}
     </div>
   );

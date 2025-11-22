@@ -9,8 +9,8 @@ export async function POST(request: NextRequest, { params }: APIRouteParams) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
     await projectStore.initialize();
-    const { title } = await request.json();
-    const page = await projectStore.addPage(params.projectId, title);
+    const { title, content } = await request.json();
+    const page = await projectStore.addPage(params.projectId, title, content || '');
     
     if (!page) {
       return NextResponse.json(

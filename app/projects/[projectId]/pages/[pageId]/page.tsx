@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { X, Edit } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import useProjectStore from '../../../../../lib/stores/projectStore';
 import useThemeStore from '../../../../../lib/stores/themeStore';
 import MarkdownPreview from '../../../../components/MarkdownPreview';
@@ -11,6 +13,7 @@ import DeletePageButton from '../../../../components/DeletePageButton';
 import Loader from '../../../../components/Loader';
 import PageLoader from '../../../../components/PageLoader';
 import Breadcrumb from '../../../../components/Breadcrumb';
+import AddPageModal from '../../../../components/AddPageModal';
 
 interface Page {
   id: string;
@@ -38,6 +41,7 @@ export default function PageDetail() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const setActiveProjectId = useProjectStore(state => state.setActiveProjectId);
   const { isDarkMode, colors } = useThemeStore();
   const theme = isDarkMode ? colors.dark : colors.light;
@@ -97,6 +101,24 @@ export default function PageDetail() {
     setIsEditing(false);
   };
 
+  const handleEditModalSubmit = async (data: any): Promise<void> => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/pages/${pageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: data.title, content: data.content }),
+      });
+
+      if (response.ok) {
+        const updatedPage: Page = await response.json();
+        setPage(updatedPage);
+        setShowEditModal(false);
+      }
+    } catch (error) {
+      console.error('Error updating page:', error);
+    }
+  };
+
   const handlePageDeleted = (): void => {
     router.push('/');
   };
@@ -110,12 +132,11 @@ export default function PageDetail() {
       <div className={`flex items-center justify-center min-h-screen ${theme.background}`}>
         <div className="text-center">
           <p className={`text-lg mb-4 ${theme.text}`}>Error: {error}</p>
-          <button
+          <Button
             onClick={() => window.location.reload()}
-            className={`px-4 py-2 rounded ${theme.button}`}
           >
             Try Again
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -141,21 +162,37 @@ export default function PageDetail() {
         {/* Fixed overlay buttons */}
         <div className="fixed top-4 right-4 z-50 flex gap-2">
           {isEditing ? (
-            <button
-              onClick={() => setIsEditing(false)}
-              className={`p-3 rounded-lg shadow-lg ${theme.button} hover:opacity-80 transition-opacity `}
-              title="Cancel Edit"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={() => setIsEditing(false)}
+                  className="shadow-lg"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Cancel Edit</p>
+              </TooltipContent>
+            </Tooltip>
           ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className={`p-3 rounded-lg shadow-lg ${theme.button} hover:opacity-80 transition-opacity `}
-              title="Edit Page"
-            >
-              <Edit className="w-5 h-5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={() => setShowEditModal(true)}
+                  className="shadow-lg"
+                >
+                  <Edit className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit Page</p>
+              </TooltipContent>
+            </Tooltip>
           )}
           {!isEditing && (
             <DeletePageButton pageId={pageId} projectId={projectId} onPageDeleted={handlePageDeleted} />
@@ -163,18 +200,26 @@ export default function PageDetail() {
         </div>
 
         <div className="mb-8">
-          <div className="my-8 border-b border-gray-300 dark:border-gray-600" />
-
           <div className="mb-6">
             <MarkdownPreview
               content={page.content || ''}
-              isEditing={isEditing}
-              onSave={handleContentSave}
-              onCancel={handleEditCancel}
+              isEditing={false}
+              onSave={() => {}}
+              onCancel={() => {}}
             />
           </div>
         </div>
       </div>
+      
+      {/* Edit Modal */}
+      <AddPageModal
+        project={project}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSubmit={handleEditModalSubmit}
+        editPage={page}
+        isEditMode={true}
+      />
     </div>
   );
 } 

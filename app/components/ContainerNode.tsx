@@ -3,7 +3,9 @@
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { NodeResizer, NodeProps } from 'reactflow';
 import { Palette, Trash2, Edit3 } from 'lucide-react';
-import useThemeStore from '../../lib/stores/themeStore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ContainerCard } from '../../types';
 
 interface ContainerNodeData {
@@ -16,12 +18,10 @@ interface ContainerNodeData {
   onDelete?: (id: string) => void;
   onStartResize?: (id: string) => void;
   onEndResize?: (id: string) => void;
+  isFlashing?: boolean;
 }
 
 const ContainerNode = memo(({ id, data, selected }: NodeProps<ContainerNodeData>) => {
-  const { isDarkMode, colors } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
-  
   const [isEditing, setIsEditing] = useState(false);
   const [label, setLabel] = useState(data.label || 'Container');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -110,34 +110,32 @@ const ContainerNode = memo(({ id, data, selected }: NodeProps<ContainerNodeData>
   return (
     <div 
       ref={containerRef}
-      className={`relative border-2 border-dashed rounded-lg ${
+      className={`relative border-2 border-dashed rounded-xl backdrop-blur-sm ${
         isResizing ? '' : 'transition-all duration-200'
-      } ${selected ? (isResizing ? '' : 'shadow-lg ring-2 ring-blue-400') : 'shadow-sm'}`}
+      } ${selected ? (isResizing ? '' : 'ring-2 ring-primary/50') : 'hover:border-opacity-80'} ${data.isFlashing ? 'node-flashing' : ''}`}
       style={{
         width: '100%',
         height: '100%',
-        borderColor: selected ? '#3b82f6' : containerColor, // Blue border when selected
-        backgroundColor: `${containerColor}10`, // 10% opacity
-        borderWidth: selected ? '3px' : '2px', // Thicker border when selected
+        borderColor: selected ? 'hsl(var(--primary))' : containerColor,
+        backgroundColor: `${containerColor}15`, // 15% opacity for better visibility
+        borderWidth: selected ? '3px' : '2px',
         willChange: isResizing ? 'width, height' : undefined
       }}
     >
       {/* Header with label and controls */}
       <div 
-        className="absolute top-0 left-0 right-0 h-12 flex items-center justify-between px-4 rounded-t-lg cursor-move"
-        style={{ backgroundColor: `${containerColor}20` }}
+        className="absolute top-0 left-0 right-0 h-14 flex items-center justify-between px-4 rounded-t-xl cursor-move backdrop-blur-md border-b border-border/50"
+        style={{ backgroundColor: `${containerColor}25` }}
         onMouseDown={(e) => {
-          // Only allow dragging if clicking on the header area itself, not the controls
           if (e.target === e.currentTarget) {
             // This allows ReactFlow to handle the drag
           } else {
-            // Prevent drag if clicking on controls
             e.stopPropagation();
           }
         }}
       >
         {isEditing ? (
-          <input
+          <Input
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -149,12 +147,13 @@ const ContainerNode = memo(({ id, data, selected }: NodeProps<ContainerNodeData>
                 setLabel(data.label || 'Container');
               }
             }}
-            className={`bg-transparent border-none outline-none text-lg font-medium ${theme.text} flex-1`}
+            className="bg-transparent border-none shadow-none text-lg font-semibold flex-1 h-auto px-0 focus-visible:ring-0"
+            style={{ color: containerColor }}
             autoFocus
           />
         ) : (
           <span 
-            className={`text-lg font-medium ${theme.text} cursor-pointer flex-1 truncate`}
+            className="text-lg font-semibold cursor-pointer flex-1 truncate hover:opacity-80 transition-opacity"
             onClick={() => setIsEditing(true)}
             style={{ color: containerColor }}
           >
@@ -165,29 +164,38 @@ const ContainerNode = memo(({ id, data, selected }: NodeProps<ContainerNodeData>
         <div className="flex items-center gap-1">
           {/* Color picker button */}
           <div className="relative">
-            <button
-              onClick={(e) => {
-                console.log('ContainerNode: Color picker button clicked, current state:', showColorPicker);
-                e.stopPropagation();
-                setShowColorPicker(!showColorPicker);
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              className={`p-1.5 rounded hover:bg-black/10 transition-colors nodrag`}
-              title="Change color"
-            >
-              <Palette className="w-4 h-4" style={{ color: containerColor }} />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    console.log('ContainerNode: Color picker button clicked, current state:', showColorPicker);
+                    e.stopPropagation();
+                    setShowColorPicker(!showColorPicker);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="h-8 w-8 nodrag hover:bg-muted"
+                >
+                  <Palette className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Change color</p>
+              </TooltipContent>
+            </Tooltip>
             
             {/* Color picker dropdown */}
             {showColorPicker && (
               <div 
                 ref={colorPickerRef}
-                className={`absolute top-6 right-0 ${theme.background2} border ${theme.border} rounded-lg shadow-lg p-2 z-50 nodrag`}
-                style={{ minWidth: '120px' }}
+                className="absolute top-10 right-0 bg-card border border-border rounded-lg p-3 z-50 nodrag"
+                style={{ minWidth: '160px' }}
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <div className="grid grid-cols-5 gap-1">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Choose Color</p>
+                <div className="grid grid-cols-5 gap-2">
                   {predefinedColors.map((color: any) => (
                     <button
                       key={color}
@@ -197,10 +205,11 @@ const ContainerNode = memo(({ id, data, selected }: NodeProps<ContainerNodeData>
                         handleColorChange(color);
                       }}
                       onMouseDown={(e) => e.stopPropagation()}
-                      className={`w-6 h-6 rounded border-2 hover:scale-110 transition-transform nodrag ${
-                        color === containerColor ? 'border-white shadow-lg' : 'border-gray-300'
+                      className={`w-7 h-7 rounded-md border-2 hover:scale-110 transition-transform nodrag ${
+                        color === containerColor ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50'
                       }`}
                       style={{ backgroundColor: color }}
+                      title={color}
                     />
                   ))}
                 </div>
@@ -209,30 +218,46 @@ const ContainerNode = memo(({ id, data, selected }: NodeProps<ContainerNodeData>
           </div>
 
           {/* Edit button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={`p-1.5 rounded hover:bg-black/10 transition-colors`}
-            title="Edit label"
-          >
-            <Edit3 className="w-4 h-4" style={{ color: containerColor }} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditing(true);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="h-8 w-8 hover:bg-muted"
+              >
+                <Edit3 className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Edit label</p>
+            </TooltipContent>
+          </Tooltip>
 
           {/* Delete button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete();
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={`p-1.5 rounded hover:bg-red-500/20 transition-colors`}
-            title="Delete container"
-          >
-            <Trash2 className="w-4 h-4 text-red-500" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Delete container</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -246,9 +271,9 @@ const ContainerNode = memo(({ id, data, selected }: NodeProps<ContainerNodeData>
           handleClassName="nodrag"
           handleStyle={{
             border: `2px solid ${containerColor}`,
-            background: '#ffffff',
+            background: 'hsl(var(--background))',
             borderRadius: 6,
-            boxShadow: '0 0 0 2px rgba(0,0,0,0.06)'
+            boxShadow: '0 0 0 2px hsl(var(--border) / 0.3)'
           }}
           lineStyle={{
             borderColor: containerColor,

@@ -1,25 +1,22 @@
 'use client';
 
 import { FileText } from 'lucide-react';
-import useThemeStore from '../../lib/stores/themeStore';
+import { Badge } from '@/components/ui/badge';
 
 interface SourceBadgeProps {
   source: string | { title: string } | null;
 }
 
 export default function SourceBadge({ source }: SourceBadgeProps) {
-  const { isDarkMode, colors } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
-
   if (!source) return null;
 
   // Handle both string and object sources
   const sourceText = typeof source === 'string' ? source : source.title || 'Unknown source';
 
   return (
-    <div className={`inline-flex items-center px-2 py-1 rounded-md text-xs border ${theme.border} ${theme.background}`}>
-      <FileText className="w-3 h-3 mr-1.5" />
+    <Badge variant="outline" className="gap-1.5">
+      <FileText className="w-3 h-3" />
       {sourceText}
-    </div>
+    </Badge>
   );
 } 

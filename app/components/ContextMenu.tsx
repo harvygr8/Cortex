@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Edit, Trash2, Plus, Upload, RotateCcw, ClipboardList, FileText, Image as ImageIcon, ChevronRight, StickyNote } from 'lucide-react';
-import useThemeStore from '../../lib/stores/themeStore';
+import { Button } from '@/components/ui/button';
 
 interface ContextMenuProps {
   x: number;
@@ -33,8 +33,6 @@ export default function ContextMenu({
   onCreateScratchpad, 
   onCreateImage 
 }: ContextMenuProps) {
-  const { isDarkMode, colors } = useThemeStore();
-  const theme = isDarkMode ? colors.dark : colors.light;
   const menuRef = useRef<HTMLDivElement>(null);
   const [showNodeSubmenu, setShowNodeSubmenu] = useState(false);
   const [submenuPosition, setSubmenuPosition] = useState({ x: 0, y: 0 });
@@ -80,21 +78,21 @@ export default function ContextMenu({
       icon: ClipboardList,
       label: 'Tasks Node',
       onClick: onCreateTasks,
-      color: theme.accent,
+      color: 'text-muted-foreground',
       description: 'Create and manage task lists'
     },
     {
       icon: StickyNote,
       label: 'Scratchpad Node',
       onClick: onCreateScratchpad,
-      color: theme.accent,
+      color: 'text-muted-foreground',
       description: 'Write notes and thoughts'
     },
     {
       icon: ImageIcon,
       label: 'Image Node',
       onClick: onCreateImage,
-      color: theme.accent,
+      color: 'text-muted-foreground',
       description: 'Display images and visuals'
     }
   ];
@@ -104,43 +102,43 @@ export default function ContextMenu({
       icon: MessageSquare,
       label: 'Ask a Question',
       onClick: onChat,
-      color: theme.accent
+      color: 'text-muted-foreground'
     },
     {
       icon: FileText,
       label: 'Add page',
       onClick: onAddPage,
-      color: theme.text
+      color: 'text-foreground'
     },
     {
       icon: Plus,
       label: 'Add Node',
       hasSubmenu: true,
-      color: theme.accent
+      color: 'text-muted-foreground'
     },
     {
       icon: Upload,
       label: 'Import page',
       onClick: onImportData,
-      color: theme.text
+      color: 'text-foreground'
     },
     {
       icon: RotateCcw,
       label: 'Regenerate vectors',
       onClick: onRegenerateVectors,
-      color: theme.text
+      color: 'text-foreground'
     },
     {
       icon: Edit,
       label: 'Edit project',
       onClick: onEdit,
-      color: theme.text
+      color: 'text-foreground'
     },
     {
       icon: Trash2,
       label: 'Delete project',
       onClick: onDelete,
-      color: theme.danger
+      color: 'text-destructive'
     }
   ];
 
@@ -149,7 +147,7 @@ export default function ContextMenu({
       <div
         ref={menuRef}
         data-context-menu
-        className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-48`}
+        className="fixed z-50 bg-popover border border-border rounded-lg py-2 w-48"
         style={{
           left: x,
           top: y,
@@ -162,21 +160,24 @@ export default function ContextMenu({
             onMouseEnter={item.hasSubmenu ? handleNodeSubmenuHover : undefined}
             onMouseLeave={item.hasSubmenu ? undefined : undefined}
           >
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 if (!item.hasSubmenu && item.onClick) {
                   item.onClick();
                   onClose();
                 }
               }}
-              className={`w-full px-4 py-2 text-left flex items-center gap-3 ${theme.hover} transition-colors ${item.hasSubmenu ? 'cursor-default' : 'cursor-pointer'}`}
+              className={`w-full justify-start px-4 py-2 h-auto ${item.hasSubmenu ? 'cursor-default' : 'cursor-pointer'} ${
+                item.label === 'Delete project' ? 'text-destructive hover:text-destructive' : ''
+              }`}
             >
-              <item.icon className={`w-4 h-4 ${item.color}`} />
-              <span className={`text-sm ${theme.text} flex-1`}>{item.label}</span>
+              <item.icon className="w-4 h-4" />
+              <span className="text-sm flex-1 text-left">{item.label}</span>
               {item.hasSubmenu && (
-                <ChevronRight className={`w-3 h-3 ${theme.secondary}`} />
+                <ChevronRight className="w-3 h-3 text-muted-foreground" />
               )}
-            </button>
+            </Button>
           </div>
         ))}
       </div>
@@ -185,7 +186,7 @@ export default function ContextMenu({
       {showNodeSubmenu && (
         <div
           data-context-menu
-          className={`fixed z-50 ${theme.background2} border ${theme.border} rounded-lg shadow-lg py-2 min-w-56`}
+          className="fixed z-50 bg-popover border border-border rounded-lg py-2 w-60"
           style={{
             left: submenuPosition.x,
             top: submenuPosition.y,
@@ -193,8 +194,9 @@ export default function ContextMenu({
           onMouseEnter={() => setShowNodeSubmenu(true)}
         >
           {nodeTypes.map((nodeType, index) => (
-            <button
+            <Button
               key={index}
+              variant="ghost"
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -203,14 +205,14 @@ export default function ContextMenu({
                 }
                 onClose();
               }}
-              className={`w-full px-4 py-3 text-left flex items-start gap-3 ${theme.hover} transition-colors cursor-pointer`}
+              className="w-full justify-start px-4 py-3 h-auto"
             >
-              <nodeType.icon className={`w-4 h-4 ${nodeType.color} mt-0.5 flex-shrink-0`} />
-              <div className="flex-1">
-                <div className={`text-sm font-medium ${theme.text}`}>{nodeType.label}</div>
-                <div className={`text-xs ${theme.secondary} mt-0.5`}>{nodeType.description}</div>
+              <nodeType.icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 text-left">
+                <div className="text-sm font-medium">{nodeType.label}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{nodeType.description}</div>
               </div>
-            </button>
+            </Button>
           ))}
         </div>
       )}

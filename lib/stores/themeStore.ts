@@ -1,38 +1,39 @@
 import { create } from 'zustand';
-import { colors } from '../colors';
 
 interface ThemeStore {
   isDarkMode: boolean;
-  colors: typeof colors;
-  fonts: any;
   toggleTheme: () => void;
+  initializeTheme: () => void;
 }
 
-const useThemeStore = create<ThemeStore>((set) => ({
+const useThemeStore = create<ThemeStore>((set, get) => ({
   isDarkMode: false,
-  colors: colors,
-  // Font configuration - accessible via theme.font
-  fonts: colors.light.font, // Default to light mode fonts
+  initializeTheme: () => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    
+    // Sync with the theme that was already set by the script in layout.tsx
+    // The script runs before React hydrates, so we just read the current state
+    const isDark = document.documentElement.classList.contains('dark');
+    set({ isDarkMode: isDark });
+  },
   toggleTheme: () => set((state: ThemeStore) => {
     const newIsDarkMode = !state.isDarkMode;
-    // Update the document class for Tailwind dark mode
+    
+    // Update the document class for Tailwind dark mode (shadCN uses class-based dark mode)
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       if (newIsDarkMode) {
         document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
       } else {
         document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
       }
     }
-    return { 
-      isDarkMode: newIsDarkMode,
-      fonts: newIsDarkMode ? colors.dark.font : colors.light.font
-    };
+    
+    return { isDarkMode: newIsDarkMode };
   }),
 }));
-
-// Initialize light mode on page load (client-side only)
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  document.documentElement.classList.remove('dark');
-}
 
 export default useThemeStore; 
