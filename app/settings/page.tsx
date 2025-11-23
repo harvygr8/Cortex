@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, Waves, CornerDownRight, Minus, Square, Bot, RefreshCw, GitBranch } from 'lucide-react';
+import { Settings, Waves, CornerDownRight, Minus, Square, Bot, RefreshCw, GitBranch, Grid, Plus, X, Circle, Grip, PanelsTopLeft } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Separator } from '@/components/ui/separator';
-import useSettingsStore, { EdgeType } from '@/lib/stores/settingsStore';
+import useSettingsStore, { EdgeType, CanvasBackgroundVariant } from '@/lib/stores/settingsStore';
 import useThemeStore from '@/lib/stores/themeStore';
 
 const EDGE_TYPES: { value: EdgeType; label: string; icon: React.ReactNode }[] = [
@@ -15,6 +15,13 @@ const EDGE_TYPES: { value: EdgeType; label: string; icon: React.ReactNode }[] = 
   { value: 'smoothstep', label: 'Smooth Steps', icon: <CornerDownRight className="w-4 h-4" /> },
   { value: 'straight', label: 'Straight Lines', icon: <Minus className="w-4 h-4" /> },
   { value: 'step', label: 'Step Lines', icon: <Square className="w-4 h-4" /> },
+];
+
+const BACKGROUND_TYPES: { value: CanvasBackgroundVariant | 'none'; label: string; icon: React.ReactNode }[] = [
+  { value: 'dots', label: 'Dots', icon: <Grip className="w-4 h-4" /> },
+  { value: 'lines', label: 'Lines', icon: <Grid className="w-4 h-4" /> },
+  { value: 'cross', label: 'Plus', icon: <Plus className="w-4 h-4" /> },
+  { value: 'none', label: 'None', icon: <X className="w-4 h-4" /> },
 ];
 
 const COLOR_PRESETS = [
@@ -45,11 +52,21 @@ export default function SettingsPage() {
     edgeColor,
     edgeWidth,
     edgeAnimated,
+    canvasBackground,
+    canvasSnapToGrid,
+    canvasGridSize,
+    canvasMiniMap,
+    canvasControls,
     ollamaSettings,
     setEdgeType,
     setEdgeColor,
     setEdgeWidth,
     setEdgeAnimated,
+    setCanvasBackground,
+    setCanvasSnapToGrid,
+    setCanvasGridSize,
+    setCanvasMiniMap,
+    setCanvasControls,
     setOllamaSettings,
     initializeSettings,
   } = useSettingsStore();
@@ -106,6 +123,164 @@ export default function SettingsPage() {
           <Settings className="w-6 h-6" />
           <h1 className="text-2xl font-semibold">Settings</h1>
         </div>
+
+        {/* Canvas Settings Category */}
+        <div className="space-y-6 max-w-4xl">
+          <div className="flex items-center gap-2">
+            <PanelsTopLeft className="w-5 h-5" />
+            <h2 className="text-lg font-semibold">Canvas Settings</h2>
+          </div>
+
+          {/* Background Pattern */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Background Pattern</Label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {BACKGROUND_TYPES.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={canvasBackground === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  className="justify-start gap-2"
+                  onClick={() => setCanvasBackground(option.value)}
+                >
+                  {option.icon}
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid Settings */}
+          <div className="space-y-4">
+            {/* Snap to Grid */}
+            <div className="flex flex-col space-y-3">
+              <Label className="text-sm font-medium">
+                Snap to Grid
+              </Label>
+              <div className="w-fit bg-secondary rounded-md overflow-hidden">
+                <ToggleGroup
+                  type="single"
+                  value={canvasSnapToGrid ? 'on' : 'off'}
+                  onValueChange={(value) => {
+                    if (value === 'on' || value === 'off') {
+                      setCanvasSnapToGrid(value === 'on');
+                    }
+                  }}
+                  className="gap-0"
+                >
+                  <ToggleGroupItem 
+                    value="on" 
+                    aria-label="Snap to Grid On"
+                    className="h-9 px-2.5 text-sm rounded-none data-[state=on]:bg-black data-[state=on]:text-white dark:data-[state=on]:bg-white dark:data-[state=on]:text-black"
+                  >
+                    On
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="off" 
+                    aria-label="Snap to Grid Off"
+                    className="h-9 px-2.5 text-sm rounded-none data-[state=on]:bg-black data-[state=on]:text-white dark:data-[state=on]:bg-white dark:data-[state=on]:text-black"
+                  >
+                    Off
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </div>
+
+            {/* Mini Map */}
+            <div className="flex flex-col space-y-3">
+              <Label className="text-sm font-medium">
+                Show Mini Map
+              </Label>
+              <div className="w-fit bg-secondary rounded-md overflow-hidden">
+                <ToggleGroup
+                  type="single"
+                  value={canvasMiniMap ? 'on' : 'off'}
+                  onValueChange={(value) => {
+                    if (value === 'on' || value === 'off') {
+                      setCanvasMiniMap(value === 'on');
+                    }
+                  }}
+                  className="gap-0"
+                >
+                  <ToggleGroupItem 
+                    value="on" 
+                    aria-label="Mini Map On"
+                    className="h-9 px-2.5 text-sm rounded-none data-[state=on]:bg-black data-[state=on]:text-white dark:data-[state=on]:bg-white dark:data-[state=on]:text-black"
+                  >
+                    On
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="off" 
+                    aria-label="Mini Map Off"
+                    className="h-9 px-2.5 text-sm rounded-none data-[state=on]:bg-black data-[state=on]:text-white dark:data-[state=on]:bg-white dark:data-[state=on]:text-black"
+                  >
+                    Off
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex flex-col space-y-3">
+              <Label className="text-sm font-medium">
+                Show Controls
+              </Label>
+              <div className="w-fit bg-secondary rounded-md overflow-hidden">
+                <ToggleGroup
+                  type="single"
+                  value={canvasControls ? 'on' : 'off'}
+                  onValueChange={(value) => {
+                    if (value === 'on' || value === 'off') {
+                      setCanvasControls(value === 'on');
+                    }
+                  }}
+                  className="gap-0"
+                >
+                  <ToggleGroupItem 
+                    value="on" 
+                    aria-label="Controls On"
+                    className="h-9 px-2.5 text-sm rounded-none data-[state=on]:bg-black data-[state=on]:text-white dark:data-[state=on]:bg-white dark:data-[state=on]:text-black"
+                  >
+                    On
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="off" 
+                    aria-label="Controls Off"
+                    className="h-9 px-2.5 text-sm rounded-none data-[state=on]:bg-black data-[state=on]:text-white dark:data-[state=on]:bg-white dark:data-[state=on]:text-black"
+                  >
+                    Off
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </div>
+          </div>
+
+          {/* Grid Size */}
+          {canvasSnapToGrid && (
+            <div className="space-y-3">
+              <Label htmlFor="grid-size" className="text-sm font-medium">
+                Grid Size ({canvasGridSize}px)
+              </Label>
+              <div className="flex items-center justify-between">
+                <input
+                  type="range"
+                  id="grid-size"
+                  min="10"
+                  max="50"
+                  step="5"
+                  value={canvasGridSize}
+                  onChange={(e) => setCanvasGridSize(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary mr-4"
+                />
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  {canvasGridSize}px
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Separator />
 
         {/* Edge Style Settings Category */}
         <div className="space-y-6 max-w-4xl">
@@ -299,13 +474,6 @@ export default function SettingsPage() {
               Controls randomness. Lower values are more deterministic, higher values more creative.
             </p>
           </div>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-6 max-w-4xl">
-          <h2 className="text-lg font-semibold">Preferences</h2>
-          <p className="text-sm text-muted-foreground">More settings coming soon...</p>
         </div>
       </div>
     </div>

@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ReactFlow, { 
   Controls, 
+  Background,
+  MiniMap,
+  BackgroundVariant,
   useNodesState, 
   useEdgesState, 
   addEdge,
@@ -101,6 +104,11 @@ function ProjectCanvasFlow({
     edgeColor,
     edgeWidth,
     edgeAnimated,
+    canvasBackground,
+    canvasSnapToGrid,
+    canvasGridSize,
+    canvasMiniMap,
+    canvasControls,
     ollamaSettings,
     initializeSettings,
   } = useSettingsStore();
@@ -2616,9 +2624,8 @@ function ProjectCanvasFlow({
       const newEdge = createEdge(
         params.source || '',
         params.target || '',
-        params.sourceHandle,
-        params.targetHandle,
-        params.id
+        params.sourceHandle || undefined,
+        params.targetHandle || undefined
       );
       return addEdge(newEdge, eds);
     });
@@ -3107,8 +3114,31 @@ function ProjectCanvasFlow({
         selectNodesOnDrag={false}
         selectionMode={SelectionMode.Partial}
         selectionKeyCode={null}
+        snapToGrid={canvasSnapToGrid}
+        snapGrid={[canvasGridSize, canvasGridSize]}
       >
-        {/* <Controls /> */}
+        {canvasBackground !== 'none' && (
+          <Background
+            variant={canvasBackground as BackgroundVariant}
+            gap={canvasGridSize}
+            size={canvasBackground === 'dots' ? 2 : (canvasBackground === 'cross' ? 6 : 1)}
+            color={
+              canvasBackground === 'lines' 
+                ? (isDarkMode ? 'rgba(82, 82, 91, 0.5)' : 'rgba(148, 163, 184, 0.4)') // More faint for lines
+                : (isDarkMode ? '#52525b' : '#94a3b8')
+            }
+            className="pointer-events-none"
+            lineWidth={
+              canvasBackground === 'cross' 
+                ? 1 
+                : canvasBackground === 'lines' 
+                ? 0.5 
+                : undefined
+            }
+          />
+        )}
+        {canvasControls && <Controls />}
+        {canvasMiniMap && <MiniMap />}
       </ReactFlow>
 
       {/* Empty canvas message when no projects */}
@@ -3265,7 +3295,7 @@ function ProjectCanvasFlow({
       )}
 
       {/* Add Page Modal */}
-      {addPageModal && (
+      {addPageModal && addPageModal.project && (
         <AddPageModal
           project={addPageModal.project}
           isOpen={addPageModal.isOpen}

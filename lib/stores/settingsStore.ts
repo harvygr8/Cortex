@@ -6,6 +6,8 @@ export type EdgeColor = {
   dark: string;
 };
 
+export type CanvasBackgroundVariant = 'dots' | 'lines' | 'cross';
+
 export interface OllamaSettings {
   baseUrl: string;
   model: string;
@@ -19,6 +21,13 @@ interface SettingsStore {
   edgeWidth: number;
   edgeAnimated: boolean;
   
+  // Canvas settings
+  canvasBackground: CanvasBackgroundVariant | 'none';
+  canvasSnapToGrid: boolean;
+  canvasGridSize: number;
+  canvasMiniMap: boolean;
+  canvasControls: boolean;
+  
   // Ollama settings
   ollamaSettings: OllamaSettings;
 
@@ -27,6 +36,13 @@ interface SettingsStore {
   setEdgeColor: (color: EdgeColor) => void;
   setEdgeWidth: (width: number) => void;
   setEdgeAnimated: (animated: boolean) => void;
+  
+  setCanvasBackground: (variant: CanvasBackgroundVariant | 'none') => void;
+  setCanvasSnapToGrid: (snap: boolean) => void;
+  setCanvasGridSize: (size: number) => void;
+  setCanvasMiniMap: (show: boolean) => void;
+  setCanvasControls: (show: boolean) => void;
+
   setOllamaSettings: (settings: Partial<OllamaSettings>) => void;
   
   // Initialize settings from localStorage
@@ -50,6 +66,13 @@ const useSettingsStore = create<SettingsStore>((set, get) => ({
   edgeColor: defaultEdgeColor,
   edgeWidth: 2,
   edgeAnimated: true,
+  
+  canvasBackground: 'dots',
+  canvasSnapToGrid: true,
+  canvasGridSize: 20,
+  canvasMiniMap: true,
+  canvasControls: true,
+
   ollamaSettings: defaultOllamaSettings,
   
   // Update methods
@@ -77,6 +100,38 @@ const useSettingsStore = create<SettingsStore>((set, get) => ({
       localStorage.setItem('cortex-edge-animated', animated.toString());
     }
   },
+
+  setCanvasBackground: (variant: CanvasBackgroundVariant | 'none') => {
+    set({ canvasBackground: variant });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cortex-canvas-background', variant);
+    }
+  },
+  setCanvasSnapToGrid: (snap: boolean) => {
+    set({ canvasSnapToGrid: snap });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cortex-canvas-snap', snap.toString());
+    }
+  },
+  setCanvasGridSize: (size: number) => {
+    set({ canvasGridSize: size });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cortex-canvas-grid-size', size.toString());
+    }
+  },
+  setCanvasMiniMap: (show: boolean) => {
+    set({ canvasMiniMap: show });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cortex-canvas-minimap', show.toString());
+    }
+  },
+  setCanvasControls: (show: boolean) => {
+    set({ canvasControls: show });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cortex-canvas-controls', show.toString());
+    }
+  },
+
   setOllamaSettings: (settings: Partial<OllamaSettings>) => {
     const current = get().ollamaSettings;
     const newSettings = { ...current, ...settings };
@@ -94,6 +149,13 @@ const useSettingsStore = create<SettingsStore>((set, get) => ({
     const savedEdgeColor = localStorage.getItem('cortex-edge-color');
     const savedEdgeWidth = localStorage.getItem('cortex-edge-width');
     const savedEdgeAnimated = localStorage.getItem('cortex-edge-animated');
+    
+    const savedCanvasBackground = localStorage.getItem('cortex-canvas-background') as CanvasBackgroundVariant | 'none';
+    const savedCanvasSnap = localStorage.getItem('cortex-canvas-snap');
+    const savedCanvasGridSize = localStorage.getItem('cortex-canvas-grid-size');
+    const savedCanvasMiniMap = localStorage.getItem('cortex-canvas-minimap');
+    const savedCanvasControls = localStorage.getItem('cortex-canvas-controls');
+
     const savedOllamaSettings = localStorage.getItem('cortex-ollama-settings');
     
     const updates: Partial<SettingsStore> = {};
@@ -121,6 +183,17 @@ const useSettingsStore = create<SettingsStore>((set, get) => ({
       updates.edgeAnimated = savedEdgeAnimated === 'true';
     }
 
+    if (savedCanvasBackground && ['dots', 'lines', 'cross', 'none'].includes(savedCanvasBackground)) {
+      updates.canvasBackground = savedCanvasBackground;
+    }
+    if (savedCanvasSnap !== null) updates.canvasSnapToGrid = savedCanvasSnap === 'true';
+    if (savedCanvasGridSize) {
+      const size = parseInt(savedCanvasGridSize, 10);
+      if (!isNaN(size) && size > 0) updates.canvasGridSize = size;
+    }
+    if (savedCanvasMiniMap !== null) updates.canvasMiniMap = savedCanvasMiniMap === 'true';
+    if (savedCanvasControls !== null) updates.canvasControls = savedCanvasControls === 'true';
+
     if (savedOllamaSettings) {
       try {
         updates.ollamaSettings = { ...defaultOllamaSettings, ...JSON.parse(savedOllamaSettings) };
@@ -136,4 +209,3 @@ const useSettingsStore = create<SettingsStore>((set, get) => ({
 }));
 
 export default useSettingsStore;
-
