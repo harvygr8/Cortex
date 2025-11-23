@@ -119,9 +119,12 @@ export default function SettingsPage() {
     <div className="w-full min-h-screen bg-background">
       <div className="w-full px-8 py-6 space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-2">
-          <Settings className="w-6 h-6" />
-          <h1 className="text-2xl font-semibold">Settings</h1>
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <Settings className="w-6 h-6" />
+            <h1 className="text-2xl font-semibold">Settings</h1>
+          </div>
+          <Separator />
         </div>
 
         {/* Canvas Settings Category */}

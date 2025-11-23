@@ -93,10 +93,12 @@ const nodeTypes = {
 // React Flow wrapper component
 function ProjectCanvasFlow({ 
   projects, 
-  onProjectCreated 
+  onProjectCreated,
+  isLoading
 }: { 
   projects: Project[];
   onProjectCreated?: (project: Project) => void;
+  isLoading?: boolean;
 }) {
   const { isDarkMode } = useThemeStore();
   const {
@@ -3052,18 +3054,23 @@ function ProjectCanvasFlow({
 
   // Track when projects have been loaded
   useEffect(() => {
-    if (projects.length >= 0) {
+    if (isLoading === false || (isLoading === undefined && projects.length >= 0)) {
       setProjectsLoaded(true);
     }
-  }, [projects]);
+  }, [projects, isLoading]);
+
+  // Show loader if explicitly loading
+  if (isLoading) {
+    return <Loader text="Loading projects..." />;
+  }
 
   // Show loader while initializing when projects exist
   if (projects.length > 0 && !hasInitialized) {
     return <Loader text="Loading canvas..." />;
   }
 
-  // Show loader when projects haven't been loaded yet
-  if (!projectsLoaded) {
+  // Show loader when projects haven't been loaded yet (legacy fallback)
+  if (!projectsLoaded && isLoading === undefined) {
     return <Loader text="Loading..." />;
   }
 
@@ -3142,7 +3149,7 @@ function ProjectCanvasFlow({
       </ReactFlow>
 
       {/* Empty canvas message when no projects */}
-      {projects.length === 0 && projectsLoaded && (
+      {projects.length === 0 && (isLoading === false || projectsLoaded) && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="bg-background/80 backdrop-blur-sm border border-foreground/25 rounded-lg p-6 max-w-md text-center pointer-events-auto">
             <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -3370,14 +3377,20 @@ function ProjectCanvasFlow({
 // Main exported component with ReactFlowProvider
 export default function ProjectCanvas({ 
   projects, 
-  onProjectCreated 
+  onProjectCreated,
+  isLoading
 }: { 
   projects: Project[];
   onProjectCreated?: (project: Project) => void;
+  isLoading?: boolean;
 }) {
   return (
     <ReactFlowProvider>
-      <ProjectCanvasFlow projects={projects} onProjectCreated={onProjectCreated} />
+      <ProjectCanvasFlow 
+        projects={projects} 
+        onProjectCreated={onProjectCreated} 
+        isLoading={isLoading}
+      />
     </ReactFlowProvider>
   );
 }

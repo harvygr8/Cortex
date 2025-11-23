@@ -23,6 +23,7 @@ declare global {
 
 export default function Home() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState<boolean>(false);
   const clearActiveProject = useProjectStore(state => state.clearActiveProject);
 
@@ -32,9 +33,15 @@ export default function Home() {
   }, []);
 
   const fetchProjects = async (): Promise<void> => {
-    const response = await fetch('/api/projects');
-    const data: Project[] = await response.json();
-    setProjects(data);
+    try {
+      const response = await fetch('/api/projects');
+      const data: Project[] = await response.json();
+      setProjects(data);
+    } catch (error) {
+      console.error('Failed to fetch projects:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleProjectCreated = (newProject: Project): void => {
@@ -52,7 +59,11 @@ export default function Home() {
 
   return (
     <div className="w-full h-screen">
-      <ProjectCanvas projects={projects} onProjectCreated={handleProjectCreated} />
+      <ProjectCanvas 
+        projects={projects} 
+        onProjectCreated={handleProjectCreated} 
+        isLoading={isLoading}
+      />
       <NewProjectModal 
         isOpen={isNewProjectModalOpen}
         onClose={() => setIsNewProjectModalOpen(false)}

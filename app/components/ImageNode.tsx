@@ -514,7 +514,7 @@ const ImageNode = memo(({ id, data, isConnectable, selected }: any) => {
               <div className="flex-1 flex flex-col">
                 {imageUrl ? (
                   <div className="flex-1 flex flex-col">
-                    <div className="flex-1 flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-border overflow-hidden">
+                    <div className="flex-1 flex items-center justify-center bg-muted/30 dark:bg-white rounded-lg border-2 border-dashed border-border overflow-hidden">
                       <img
                         src={imageUrl}
                         alt={imageAlt || 'Image'}
