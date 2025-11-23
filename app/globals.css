@@ -2,19 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* React Flow Edge Styles - Force solid lines */
-.react-flow__edge-path {
-  stroke-dasharray: none !important;
-}
-
-.react-flow__edge {
-  stroke-dasharray: none !important;
-}
-
-.react-flow__edge.selected .react-flow__edge-path,
-.react-flow__edge.selected .react-flow__edge {
-  stroke-dasharray: none !important;
-}
 
 /* React Flow Selection Box Styles */
 /* Show selection rectangle while dragging to select */

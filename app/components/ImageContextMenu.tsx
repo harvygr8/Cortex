@@ -63,26 +63,32 @@ export default function ImageContextMenu({
     <div
       ref={menuRef}
       data-context-menu
-      className="fixed z-50 bg-popover border border-border rounded-lg py-2 w-48"
+      className="fixed z-50 bg-popover border border-border rounded-lg w-48"
       style={{
         left: x,
         top: y,
       }}
     >
-      {menuItems.map((item, index) => (
-        <Button
-          key={index}
-          variant="ghost"
-          onClick={() => {
-            item.onClick();
-            onClose();
-          }}
-          className={`w-full justify-start px-4 py-2 h-auto ${item.isDestructive ? 'text-destructive hover:text-destructive' : ''}`}
-        >
-          <item.icon className="w-4 h-4" />
-          <span className="text-sm">{item.label}</span>
-        </Button>
-      ))}
+      {menuItems.map((item, index) => {
+        const isFirst = index === 0;
+        const isLast = index === menuItems.length - 1;
+        return (
+          <Button
+            key={index}
+            variant="ghost"
+            onClick={() => {
+              item.onClick();
+              onClose();
+            }}
+            className={`w-full justify-start px-4 py-2 h-auto font-normal rounded-none ${
+              isFirst ? 'rounded-t-lg' : ''
+            } ${isLast ? 'rounded-b-lg' : ''} ${item.isDestructive ? 'text-destructive hover:text-destructive' : ''}`}
+          >
+            <item.icon className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm">{item.label}</span>
+          </Button>
+        );
+      })}
     </div>
   );
 }

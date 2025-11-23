@@ -209,7 +209,7 @@ export default function AddPageModal({ project, isOpen, onClose, onSubmit, editP
                 }}
               />
               <div className="flex items-center gap-1 shrink-0">
-                <div className="w-fit bg-gray-200 dark:bg-gray-800 rounded-md overflow-hidden">
+                <div className="w-fit bg-secondary rounded-md overflow-hidden">
                   <ToggleGroup
                     type="single"
                     value={showPreview ? 'preview' : 'edit'}

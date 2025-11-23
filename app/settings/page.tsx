@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Settings, Waves, CornerDownRight, Minus, Square } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Settings, Waves, CornerDownRight, Minus, Square, Bot, RefreshCw, GitBranch } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Separator } from '@/components/ui/separator';
 import useSettingsStore, { EdgeType } from '@/lib/stores/settingsStore';
@@ -44,20 +45,58 @@ export default function SettingsPage() {
     edgeColor,
     edgeWidth,
     edgeAnimated,
+    ollamaSettings,
     setEdgeType,
     setEdgeColor,
     setEdgeWidth,
     setEdgeAnimated,
+    setOllamaSettings,
     initializeSettings,
   } = useSettingsStore();
+
+  const [models, setModels] = useState<string[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
 
   useEffect(() => {
     initializeSettings();
   }, [initializeSettings]);
 
+  const fetchModels = async () => {
+    if (!ollamaSettings?.baseUrl) return;
+    
+    setIsLoadingModels(true);
+    try {
+      const res = await fetch(`/api/ollama/tags?url=${encodeURIComponent(ollamaSettings.baseUrl)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.models && Array.isArray(data.models)) {
+          const filteredModels = data.models
+            .filter((m: any) => {
+              const name = m.name.toLowerCase();
+              // Filter out common embedding model keywords
+              return !name.includes('embed') && !name.includes('bert');
+            })
+            .map((m: any) => m.name);
+          setModels(filteredModels);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch models:', error);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  // Fetch models on mount or when URL changes (debounced potentially, but simple effect is ok for now)
+  useEffect(() => {
+    fetchModels();
+  }, [ollamaSettings?.baseUrl]);
+
   const handleColorPreset = (light: string, dark: string) => {
     setEdgeColor({ light, dark });
   };
+
+  if (!ollamaSettings) return null; // Hydration check
 
   return (
     <div className="w-full min-h-screen bg-background">
@@ -70,7 +109,10 @@ export default function SettingsPage() {
 
         {/* Edge Style Settings Category */}
         <div className="space-y-6 max-w-4xl">
-          <h2 className="text-lg font-semibold">Edge Styles</h2>
+          <div className="flex items-center gap-2">
+            <GitBranch className="w-5 h-5" />
+            <h2 className="text-lg font-semibold">Edge Styles</h2>
+          </div>
           
           {/* Edge Type */}
           <div className="space-y-3">
@@ -94,25 +136,25 @@ export default function SettingsPage() {
           {/* Edge Color */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Color</Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-9 gap-2 max-w-md">
               {COLOR_PRESETS.map((preset) => {
                 const isSelected = edgeColor.light === preset.light && edgeColor.dark === preset.dark;
+                const colorValue = isDarkMode ? preset.dark : preset.light;
                 return (
-                  <Button
+                  <button
                     key={preset.name}
-                    variant={isSelected ? 'default' : 'outline'}
-                    size="sm"
-                    className="gap-1.5 h-8"
+                    type="button"
                     onClick={() => handleColorPreset(preset.light, preset.dark)}
-                  >
-                    <div
-                      className="w-3 h-3 rounded-sm"
-                      style={{
-                        backgroundColor: isDarkMode ? preset.dark : preset.light,
-                      }}
-                    />
-                    {preset.name}
-                  </Button>
+                    className={`w-10 h-10 rounded-md transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+                      isSelected 
+                        ? 'ring-2 ring-foreground ring-offset-2 shadow-md scale-110' 
+                        : 'hover:ring-1 hover:ring-border'
+                    }`}
+                    style={{
+                      backgroundColor: colorValue,
+                    }}
+                    aria-label={`Select ${preset.name} color`}
+                  />
                 );
               })}
             </div>
@@ -145,7 +187,7 @@ export default function SettingsPage() {
             <Label htmlFor="edge-animation" className="text-sm font-medium">
               Animation
             </Label>
-            <div className="w-fit bg-gray-200 dark:bg-gray-800 rounded-md overflow-hidden">
+            <div className="w-fit bg-secondary rounded-md overflow-hidden">
               <ToggleGroup
                 type="single"
                 value={edgeAnimated ? 'on' : 'off'}
@@ -177,10 +219,86 @@ export default function SettingsPage() {
 
         <Separator />
 
-        {/* Placeholder for future settings categories */}
+        {/* Ollama Settings Category */}
         <div className="space-y-6 max-w-4xl">
-          <h2 className="text-lg font-semibold">Appearance</h2>
-          <p className="text-sm text-muted-foreground">More settings coming soon...</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="w-5 h-5" />
+              <h2 className="text-lg font-semibold">Model settings</h2>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchModels} 
+              disabled={isLoadingModels}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoadingModels ? 'animate-spin' : ''}`} />
+              Refresh Models
+            </Button>
+          </div>
+          
+          {/* Base URL */}
+          <div className="space-y-3">
+            <Label htmlFor="ollama-url" className="text-sm font-medium">Ollama URL</Label>
+            <Input
+              id="ollama-url"
+              value={ollamaSettings.baseUrl}
+              onChange={(e) => setOllamaSettings({ baseUrl: e.target.value })}
+              placeholder="http://localhost:11434"
+            />
+            <p className="text-xs text-muted-foreground">
+              The URL where your Ollama instance is running. Default is http://localhost:11434.
+            </p>
+          </div>
+
+          {/* Model Selection */}
+          <div className="space-y-3">
+            <Label htmlFor="ollama-model" className="text-sm font-medium">Chat Model</Label>
+             <select
+              id="ollama-model"
+              value={ollamaSettings.model}
+              onChange={(e) => setOllamaSettings({ model: e.target.value })}
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {models.length > 0 ? (
+                models.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))
+              ) : (
+                 <option value={ollamaSettings.model}>{ollamaSettings.model} (Custom/Default)</option>
+              )}
+            </select>
+             {models.length === 0 && (
+              <p className="text-xs text-amber-500">
+                No models detected. Ensure Ollama is running and click "Refresh Models".
+              </p>
+            )}
+          </div>
+
+           {/* Temperature */}
+          <div className="space-y-3">
+            <Label htmlFor="ollama-temp" className="text-sm font-medium">
+              Temperature ({ollamaSettings.temperature})
+            </Label>
+             <div className="flex items-center justify-between">
+              <input
+                type="range"
+                id="ollama-temp"
+                min="0"
+                max="1"
+                step="0.1"
+                value={ollamaSettings.temperature}
+                onChange={(e) => setOllamaSettings({ temperature: parseFloat(e.target.value) })}
+                className="flex-1 h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary mr-4"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Controls randomness. Lower values are more deterministic, higher values more creative.
+            </p>
+          </div>
         </div>
 
         <Separator />

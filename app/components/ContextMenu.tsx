@@ -147,73 +147,85 @@ export default function ContextMenu({
       <div
         ref={menuRef}
         data-context-menu
-        className="fixed z-50 bg-popover border border-border rounded-lg py-2 w-48"
+        className="fixed z-50 bg-popover border border-border rounded-lg w-48"
         style={{
           left: x,
           top: y,
         }}
       >
-        {menuItems.map((item, index) => (
-          <div
-            key={index}
-            className="relative"
-            onMouseEnter={item.hasSubmenu ? handleNodeSubmenuHover : undefined}
-            onMouseLeave={item.hasSubmenu ? undefined : undefined}
-          >
-            <Button
-              variant="ghost"
-              onClick={() => {
-                if (!item.hasSubmenu && item.onClick) {
-                  item.onClick();
-                  onClose();
-                }
-              }}
-              className={`w-full justify-start px-4 py-2 h-auto ${item.hasSubmenu ? 'cursor-default' : 'cursor-pointer'} ${
-                item.label === 'Delete project' ? 'text-destructive hover:text-destructive' : ''
-              }`}
+        {menuItems.map((item, index) => {
+          const isFirst = index === 0;
+          const isLast = index === menuItems.length - 1;
+          return (
+            <div
+              key={index}
+              className="relative"
+              onMouseEnter={item.hasSubmenu ? handleNodeSubmenuHover : undefined}
+              onMouseLeave={item.hasSubmenu ? undefined : undefined}
             >
-              <item.icon className="w-4 h-4" />
-              <span className="text-sm flex-1 text-left">{item.label}</span>
-              {item.hasSubmenu && (
-                <ChevronRight className="w-3 h-3 text-muted-foreground" />
-              )}
-            </Button>
-          </div>
-        ))}
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  if (!item.hasSubmenu && item.onClick) {
+                    item.onClick();
+                    onClose();
+                  }
+                }}
+                className={`w-full justify-start px-4 py-2 h-auto font-normal rounded-none ${
+                  isFirst ? 'rounded-t-lg' : ''
+                } ${isLast ? 'rounded-b-lg' : ''} ${item.hasSubmenu ? 'cursor-default' : 'cursor-pointer'} ${
+                  item.label === 'Delete project' ? 'text-destructive hover:text-destructive' : ''
+                }`}
+              >
+                <item.icon className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm flex-1 text-left">{item.label}</span>
+                {item.hasSubmenu && (
+                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                )}
+              </Button>
+            </div>
+          );
+        })}
       </div>
 
       {/* Node Submenu */}
       {showNodeSubmenu && (
         <div
           data-context-menu
-          className="fixed z-50 bg-popover border border-border rounded-lg py-2 w-60"
+          className="fixed z-50 bg-popover border border-border rounded-lg w-60"
           style={{
             left: submenuPosition.x,
             top: submenuPosition.y,
           }}
           onMouseEnter={() => setShowNodeSubmenu(true)}
         >
-          {nodeTypes.map((nodeType, index) => (
-            <Button
-              key={index}
-              variant="ghost"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (nodeType.onClick) {
-                  nodeType.onClick();
-                }
-                onClose();
-              }}
-              className="w-full justify-start px-4 py-3 h-auto"
-            >
-              <nodeType.icon className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 text-left">
-                <div className="text-sm font-medium">{nodeType.label}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{nodeType.description}</div>
-              </div>
-            </Button>
-          ))}
+          {nodeTypes.map((nodeType, index) => {
+            const isFirst = index === 0;
+            const isLast = index === nodeTypes.length - 1;
+            return (
+              <Button
+                key={index}
+                variant="ghost"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (nodeType.onClick) {
+                    nodeType.onClick();
+                  }
+                  onClose();
+                }}
+                className={`w-full justify-start px-4 py-3 h-auto font-normal rounded-none ${
+                  isFirst ? 'rounded-t-lg' : ''
+                } ${isLast ? 'rounded-b-lg' : ''}`}
+              >
+                <nodeType.icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                <div className="flex-1 text-left">
+                  <div className="text-sm">{nodeType.label}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{nodeType.description}</div>
+                </div>
+              </Button>
+            );
+          })}
         </div>
       )}
     </>

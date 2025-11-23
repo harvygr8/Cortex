@@ -444,7 +444,7 @@ const ImageNode = memo(({ id, data, isConnectable, selected }: any) => {
         </CardHeader>
 
         {/* Content */}
-        <CardContent className="flex-1 overflow-hidden pt-4 px-6">
+        <CardContent className="flex-1 overflow-hidden pt-4 px-6 flex flex-col">
           <div className="flex-1 flex flex-col">
             {isEditing ? (
               // Edit Mode

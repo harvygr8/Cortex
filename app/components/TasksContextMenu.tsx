@@ -47,31 +47,31 @@ const TasksContextMenu = memo(({ x, y, onClose, onDelete, onExportTasks, onDetac
       style={{ left: x, top: y }}
       onClick={handleClick}
     >
-      <div className="py-2 rounded-lg border bg-popover border-border w-48">
+      <div className="rounded-lg border bg-popover border-border w-48">
         <Button
           variant="ghost"
           onClick={() => handleAction(onExportTasks)}
-          className="w-full justify-start px-4 py-2 h-auto"
+          className="w-full justify-start px-4 py-2 h-auto font-normal rounded-none rounded-t-lg"
         >
-          <FileText className="w-4 h-4" />
+          <FileText className="w-4 h-4 text-muted-foreground" />
           Export Tasks
         </Button>
         
         <Button
           variant="ghost"
           onClick={() => handleAction(onDetach)}
-          className="w-full justify-start px-4 py-2 h-auto"
+          className="w-full justify-start px-4 py-2 h-auto font-normal rounded-none"
         >
-          <Unlink className="w-4 h-4" />
+          <Unlink className="w-4 h-4 text-muted-foreground" />
           Detach from project
         </Button>
         
         <Button
           variant="ghost"
           onClick={() => handleAction(onDelete)}
-          className="w-full justify-start px-4 py-2 h-auto text-destructive hover:text-destructive"
+          className="w-full justify-start px-4 py-2 h-auto font-normal rounded-none rounded-b-lg text-destructive hover:text-destructive"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-4 text-muted-foreground" />
           Delete Task List
         </Button>
       </div>

@@ -2,14 +2,20 @@ import { RunnableSequence } from "@langchain/core/runnables";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ChatOllama } from "@langchain/community/chat_models/ollama";
 
+export interface NodeConfig {
+  baseUrl?: string;
+  model?: string;
+  temperature?: number;
+}
+
 export class GuardRailNode {
   private chain: any;
   
-  constructor() {
+  constructor(config?: NodeConfig) {
     const model = new ChatOllama({
-      baseUrl: "http://localhost:11434",
-      model: "gemma3:4b",
-      temperature: 0.3
+      baseUrl: config?.baseUrl || "http://localhost:11434",
+      model: config?.model || "gemma3:4b",
+      temperature: 0.3 // Keep consistent for moderation
     });
 
     const prompt = ChatPromptTemplate.fromTemplate(`
@@ -91,11 +97,11 @@ export class GuardRailNode {
 export class ResponseNode {
   private chain: any;
   
-  constructor() {
+  constructor(config?: NodeConfig) {
     const model = new ChatOllama({
-      baseUrl: "http://localhost:11434",
-      model: "gemma3:4b",
-      temperature: 0.1  // Lower temperature for more deterministic, context-focused responses
+      baseUrl: config?.baseUrl || "http://localhost:11434",
+      model: config?.model || "gemma3:4b",
+      temperature: config?.temperature ?? 0.1  // Lower temperature for more deterministic, context-focused responses
     });
 
     const prompt = ChatPromptTemplate.fromTemplate(`
@@ -349,10 +355,10 @@ export class ResponseNode {
 export class QueryClassifierNode {
   private chain: any;
   
-  constructor() {
+  constructor(config?: NodeConfig) {
     const model = new ChatOllama({
-      baseUrl: "http://localhost:11434",
-      model: "gemma3:4b",
+      baseUrl: config?.baseUrl || "http://localhost:11434",
+      model: config?.model || "gemma3:4b",
       temperature: 0.1
     });
 
@@ -424,11 +430,11 @@ export class QueryClassifierNode {
 export class GeneralResponderNode {
   private chain: any;
   
-  constructor() {
+  constructor(config?: NodeConfig) {
     const model = new ChatOllama({
-      baseUrl: "http://localhost:11434",
-      model: "gemma3:4b",
-      temperature: 0.6
+      baseUrl: config?.baseUrl || "http://localhost:11434",
+      model: config?.model || "gemma3:4b",
+      temperature: config?.temperature ?? 0.6
     });
 
     const prompt = ChatPromptTemplate.fromTemplate(`

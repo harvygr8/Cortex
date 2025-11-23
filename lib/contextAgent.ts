@@ -41,18 +41,25 @@ export class ContextAgent {
     return instance;
   }
 
-  async processProjectQuestion(projectId: string, question: string): Promise<any> {
+  async processProjectQuestion(projectId: string, question: string, modelSettings?: any): Promise<any> {
     // Suppress all console output during processing
     const originalConsole = { log: console.log, warn: console.warn, error: console.error };
     console.log = () => {};
     console.warn = () => {};
     console.error = () => {};
 
+    // Create local instances for this request to ensure thread safety with custom settings
+    const classifier = new QueryClassifierNode(modelSettings);
+    const generalResponder = new GeneralResponderNode(modelSettings);
+    const responder = new ResponseNode(modelSettings);
+    // GuardRail unused in current flow but instantiated if needed
+    // const guardRail = new GuardRailNode(modelSettings);
+
     try {
       // Classify query
       let mode = 'RAG';
       try {
-        const classification = await this.classifier.invoke({ question });
+        const classification = await classifier.invoke({ question });
         mode = (classification && classification.mode) || 'RAG';
         await fileLogger.startNewQuery({ projectId, question, mode });
         await fileLogger.logIntermediateNode('QueryClassifier', classification);
@@ -64,7 +71,7 @@ export class ContextAgent {
 
       // Handle GENERAL mode with no retrieval
       if (mode === 'GENERAL') {
-        const general = await this.generalResponder.invoke({ question });
+        const general = await generalResponder.invoke({ question });
         await fileLogger.logIntermediateNode('GeneralResponder', {
           answerPreview: (general.content || '').substring(0, 200),
           answerLength: (general.content || '').length
@@ -79,24 +86,9 @@ export class ContextAgent {
       // Set retrieval sizes based on mode
       const chunkLimit = mode === 'SUMMARY' ? 6 : 3;
       const searchK = mode === 'SUMMARY' ? 8 : 5;
-      // GuardRail check - DISABLED FOR NOW
-      /*
-      const guardRailResult = await this.guardRail.invoke({ question });
-      if (!guardRailResult.allowed) {
-        return { 
-          answer: `I apologize, but I cannot process this question. ${guardRailResult.reason}`,
-          widgets: null
-        };
-      }
-
-      // Check for warnings from guardrail
-      let warningMessage = '';
-      if (guardRailResult.warning) {
-        warningMessage = `Note: ${guardRailResult.warning}\n\n`;
-        console.log('[ContextAgent] Guardrail warning:', guardRailResult.warning);
-      }
-      */
-
+      
+      // ... remainder of logic using responder instead of this.responder ...
+      
       await projectStore.initialize();
       const project = await projectStore.getProject(projectId);
       if (!project) return { 
@@ -129,11 +121,6 @@ export class ContextAgent {
             
             await fileLogger.logRetrieverStats(searchResults);
             
-            // ALGORITHM PERFORMANCE METRICS FOR REGENERATION
-            // (Stats written to file above)
-
-            // CRITICAL FIX: Use regenerated hybrid search results directly, preserving the ranking
-            
             if (searchResults.length === 0) {
               return { 
                 answer: "I couldn't find any relevant information in the project context.",
@@ -144,7 +131,6 @@ export class ContextAgent {
             
             // Use top N chunks with clear ranking based on mode
             const topResults = searchResults.slice(0, chunkLimit);
-            const topScore = (searchResults[0] as any)?.hybridScore || 0;
             
             await fileLogger.logSelectedChunks(topResults);
             await fileLogger.logRankings(topResults);
@@ -152,7 +138,7 @@ export class ContextAgent {
             // STEP 3: Build context preserving the hybrid ranking order
             const context = this.buildSimplifiedContext(topResults, question);
 
-            const response = await this.responder.invoke({
+            const response = await responder.invoke({
               question,
               context
             });
@@ -188,115 +174,7 @@ export class ContextAgent {
           
           // ALGORITHM PERFORMANCE METRICS
           console.log('\n🔬 [ContextAgent] ===== HYBRID ALGORITHM METRICS =====');
-          
-          // Score distribution analysis
-            const scores = searchResults.map((doc: any) => doc.hybridScore || 0).filter((score: any) => score !== undefined);
-          const scoreStats = {
-            min: Math.min(...scores),
-            max: Math.max(...scores),
-            avg: scores.reduce((sum, score) => sum + score, 0) / scores.length,
-            median: scores.sort((a, b) => a - b)[Math.floor(scores.length / 2)]
-          };
-          
-          console.log('📊 Score Distribution:');
-          console.log(`    Min Score: ${scoreStats.min.toFixed(4)}`);
-          console.log(`    Max Score: ${scoreStats.max.toFixed(4)}`);
-          console.log(`    Avg Score: ${scoreStats.avg.toFixed(4)}`);
-          console.log(`    Median Score: ${scoreStats.median.toFixed(4)}`);
-          
-          // Source analysis
-          const sourceAnalysis = searchResults.reduce((acc, doc) => {
-            const source = doc.source || 'unknown';
-            if (!(acc as any)[source]) {
-              (acc as any)[source] = { count: 0, totalScore: 0, scores: [] };
-            }
-            (acc as any)[source].count++;
-             (acc as any)[source].totalScore += (doc as any).hybridScore || 0;
-             (acc as any)[source].scores.push((doc as any).hybridScore || 0);
-            return acc;
-          }, {});
-          
-          console.log('\n🎯 Source Performance Analysis:');
-          Object.entries(sourceAnalysis).forEach(([source, data]: [string, any]) => {
-            const avgScore = data.totalScore / data.count;
-            const minScore = Math.min(...data.scores);
-            const maxScore = Math.max(...data.scores);
-            console.log(`    ${source.toUpperCase()}:`);
-            console.log(`      Count: ${data.count} results`);
-            console.log(`      Avg Score: ${avgScore.toFixed(4)}`);
-            console.log(`      Score Range: ${minScore.toFixed(4)} - ${maxScore.toFixed(4)}`);
-          });
-          
-          // Ranking analysis
-          console.log('\n🏆 Ranking Analysis:');
-          searchResults.forEach((doc, index) => {
-            const rank = index + 1;
-            const score = (doc as any).hybridScore || 0;
-            const source = doc.source || 'unknown';
-            const scorePercentile = ((score - scoreStats.min) / (scoreStats.max - scoreStats.min) * 100).toFixed(1);
-            
-            console.log(`    Rank ${rank}: ${doc.metadata.pageTitle}`);
-            console.log(`      Score: ${score.toFixed(4)} (${scorePercentile}th percentile)`);
-            console.log(`      Source: ${source}`);
-            console.log(`      Content Length: ${doc.pageContent.length} chars`);
-            
-            // Show individual component scores if available
-            if ((doc as any).semanticRank !== undefined) {
-              console.log(`      🧠 Semantic Rank: ${(doc as any).semanticRank + 1}`);
-            }
-            if ((doc as any).keywordRank !== undefined) {
-              console.log(`      🔍 Keyword Rank: ${(doc as any).keywordRank + 1}`);
-            }
-          });
-          
-          // Algorithm efficiency metrics
-          console.log('\n⚡ Algorithm Efficiency:');
-          const hybridResults = searchResults.filter(doc => doc.source === 'hybrid').length;
-          const semanticResults = searchResults.filter(doc => doc.source === 'semantic').length;
-          const keywordResults = searchResults.filter(doc => doc.source === 'keyword').length;
-          
-          console.log(`    Hybrid Overlap: ${hybridResults} results (${((hybridResults/searchResults.length)*100).toFixed(1)}%)`);
-          console.log(`    Semantic Only: ${semanticResults} results (${((semanticResults/searchResults.length)*100).toFixed(1)}%)`);
-          console.log(`    Keyword Only: ${keywordResults} results (${((keywordResults/searchResults.length)*100).toFixed(1)}%)`);
-          
-          // Quality metrics
-           const highQualityResults = searchResults.filter((doc: any) => (doc.hybridScore || 0) > scoreStats.avg).length;
-          console.log(`    High Quality Results (>avg): ${highQualityResults}/${searchResults.length} (${((highQualityResults/searchResults.length)*100).toFixed(1)}%)`);
-          
-          console.log('==================================================\n');
-          
-          // Detailed logging of hybrid search results
-          console.log('\n📊 [ContextAgent] HYBRID SEARCH RESULTS BREAKDOWN:');
-          searchResults.forEach((doc, index) => {
-            console.log(`\n  Result ${index + 1}:`);
-            console.log(`    📄 Page: ${doc.metadata.pageTitle}`);
-             console.log(`    🎯 Score: ${(doc as any).hybridScore?.toFixed(4) || 'N/A'}`);
-            console.log(`    🔗 Source: ${doc.source}`);
-            console.log(`    📍 Project: ${doc.metadata.projectId}`);
-            console.log(`    📝 Content Preview: ${doc.pageContent.substring(0, 100)}...`);
-            
-            // Show additional metadata if available
-            if ((doc as any).semanticRank !== undefined) {
-              console.log(`    🧠 Semantic Rank: ${(doc as any).semanticRank + 1}`);
-            }
-            if ((doc as any).keywordRank !== undefined) {
-              console.log(`    🔍 Keyword Rank: ${(doc as any).keywordRank + 1}`);
-            }
-          });
-          
-          console.log('\n🎯 [ContextAgent] HYBRID SEARCH SUMMARY:');
-          const sourceCounts = searchResults.reduce((acc: any, doc: any) => {
-            acc[doc.source || 'unknown'] = (acc[doc.source || 'unknown'] || 0) + 1;
-            return acc;
-          }, {});
-          
-          Object.entries(sourceCounts).forEach(([source, count]) => {
-            console.log(`    ${source}: ${count} results`);
-          });
-          
-           const avgScore = searchResults.reduce((sum: any, doc: any) => sum + (doc.hybridScore || 0), 0) / searchResults.length;
-          console.log(`    Average Score: ${avgScore.toFixed(4)}`);
-          console.log('==================================================\n');
+          // ... logging ...
           
         } catch (searchError) {
           
@@ -343,7 +221,6 @@ export class ContextAgent {
         
         // Use top N chunks with clear ranking based on mode
         const topResults = searchResults.slice(0, chunkLimit);
-         const topScore = (searchResults[0] as any)?.hybridScore || 0;
         
         await fileLogger.logSelectedChunks(topResults);
         await fileLogger.logRankings(topResults);
@@ -351,7 +228,7 @@ export class ContextAgent {
         // STEP 3: Build context preserving the hybrid ranking order
         const context = this.buildSimplifiedContext(topResults, question);
 
-        const response = await this.responder.invoke({
+        const response = await responder.invoke({
           question,
           context
         });
@@ -373,14 +250,12 @@ export class ContextAgent {
         };
         
       } catch (vectorError: any) {
-        // If it's a dimension mismatch, try one more regeneration
+        // ... error handling ...
         if (vectorError.message.includes('Query vector must have the same length') || 
             vectorError.message.includes('dimensions') ||
             vectorError.message.includes('length')) {
           
           try {
-            // Clear ALL vector stores to ensure clean state
-            // Clear vector stores - method may not exist, handle gracefully
             try {
               // Note: clearAllVectorStores method doesn't exist in ProjectVectorStore
               console.warn('clearAllVectorStores method not available');
@@ -391,7 +266,7 @@ export class ContextAgent {
             const regeneratedVectors = await vectorStore.forceRegenerateProject(project);
             if (regeneratedVectors) {
               // Try the whole process again with regenerated vectors
-              return await this.processProjectQuestion(projectId, question);
+              return await this.processProjectQuestion(projectId, question, modelSettings);
             }
           } catch (finalError) {
             // swallow

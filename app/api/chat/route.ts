@@ -7,9 +7,7 @@ let contextAgent: ContextAgent | null = null;
 
 const initializeAgent = async (): Promise<ContextAgent> => {
   if (!contextAgent) {
-    if (!await ollamaStatus.checkStatus()) {
-      throw new Error('Ollama server is not running. Please start Ollama first.');
-    }
+    // Skip strict status check to allow custom URLs in request
     contextAgent = await ContextAgent.initialize();
   }
   return contextAgent;
@@ -18,11 +16,16 @@ const initializeAgent = async (): Promise<ContextAgent> => {
 interface ChatRequest {
   question: string;
   projectId: string;
+  modelSettings?: {
+    baseUrl: string;
+    model: string;
+    temperature: number;
+  };
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { question, projectId }: ChatRequest = await request.json();
+    const { question, projectId, modelSettings }: ChatRequest = await request.json();
     
     if (!projectId) {
       return NextResponse.json(
@@ -34,12 +37,15 @@ export async function POST(request: NextRequest) {
     console.log('💬 [Chat API] ===== NEW CHAT REQUEST =====');
     console.log(`[Chat API] Question: "${question}"`);
     console.log(`[Chat API] Project ID: ${projectId}`);
+    if (modelSettings) {
+      console.log(`[Chat API] Custom Model Settings:`, modelSettings);
+    }
     console.log('[Chat API] Initializing context agent with hybrid search...');
 
     const agent = await initializeAgent();
     console.log('[Chat API] Context agent initialized, processing question with hybrid search...');
     
-    const response = await agent.processProjectQuestion(projectId, question);
+    const response = await agent.processProjectQuestion(projectId, question, modelSettings);
     
     console.log('✅ [Chat API] Hybrid search processing completed');
     console.log('[Chat API] Raw agent response:', response);

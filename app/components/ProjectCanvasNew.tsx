@@ -21,7 +21,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { toast } from 'sonner';
-import { Container, Plus } from 'lucide-react';
+import { Container, Plus, Trash2, Unlink } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import useThemeStore from '../../lib/stores/themeStore';
-import useSettingsStore from '../../lib/stores/settingsStore';
+import useSettingsStore, { EdgeType } from '../../lib/stores/settingsStore';
 import ContextMenu from './ContextMenu';
 import ChatContextMenu from './ChatContextMenu';
 import TasksContextMenu from './TasksContextMenu';
@@ -101,6 +101,7 @@ function ProjectCanvasFlow({
     edgeColor,
     edgeWidth,
     edgeAnimated,
+    ollamaSettings,
     initializeSettings,
   } = useSettingsStore();
   
@@ -1299,6 +1300,50 @@ function ProjectCanvasFlow({
     }
   }, [edges, normalizeEdges, setEdges]);
 
+  // Update edges when edge settings change (type, color, width, animation)
+  const prevSettingsRef = useRef<{
+    edgeType: EdgeType;
+    edgeColor: { light: string; dark: string };
+    edgeWidth: number;
+    edgeAnimated: boolean;
+    isDarkMode: boolean;
+  } | null>(null);
+  
+  useEffect(() => {
+    if (edges.length === 0) {
+      // Initialize ref on first render
+      if (prevSettingsRef.current === null) {
+        prevSettingsRef.current = { edgeType, edgeColor, edgeWidth, edgeAnimated, isDarkMode };
+      }
+      return;
+    }
+    if (edgesUpdateRef.current) return; // Skip if already updating
+    
+    const prevSettings = prevSettingsRef.current;
+    if (prevSettings === null) {
+      prevSettingsRef.current = { edgeType, edgeColor, edgeWidth, edgeAnimated, isDarkMode };
+      return;
+    }
+    
+    const settingsChanged = 
+      prevSettings.edgeType !== edgeType ||
+      prevSettings.edgeColor.light !== edgeColor.light ||
+      prevSettings.edgeColor.dark !== edgeColor.dark ||
+      prevSettings.edgeWidth !== edgeWidth ||
+      prevSettings.edgeAnimated !== edgeAnimated ||
+      prevSettings.isDarkMode !== isDarkMode;
+    
+    if (settingsChanged) {
+      prevSettingsRef.current = { edgeType, edgeColor, edgeWidth, edgeAnimated, isDarkMode };
+      edgesUpdateRef.current = true;
+      const normalized = normalizeEdges(edges);
+      setEdges(normalized);
+      setTimeout(() => {
+        edgesUpdateRef.current = false;
+      }, 100);
+    }
+  }, [edgeType, edgeColor, edgeWidth, edgeAnimated, isDarkMode, edges, normalizeEdges, setEdges]);
+
   // Update project nodes' pages data when projectPages changes (without recreating nodes)
   useEffect(() => {
     const calculateNodeHeight = (pages: any[], project: Project) => {
@@ -1556,6 +1601,7 @@ function ProjectCanvasFlow({
         body: JSON.stringify({
           question: query,
           projectId: chatModal.project.id,
+          modelSettings: ollamaSettings,
         }),
       });
 
@@ -1655,7 +1701,7 @@ function ProjectCanvasFlow({
     } catch (error) {
       console.error('Error in chat submission:', error);
     }
-  }, [chatModal, findEmptyPosition, isDarkMode]);
+  }, [chatModal, findEmptyPosition, isDarkMode, ollamaSettings]);
 
   // Create task node
   const createTaskNode = useCallback(async (sourceProjectId: string) => {
@@ -3024,6 +3070,7 @@ function ProjectCanvasFlow({
         defaultEdgeOptions={{
           type: edgeType,
           style: {
+            stroke: isDarkMode ? edgeColor.dark : edgeColor.light,
             strokeWidth: edgeWidth,
           },
           animated: edgeAnimated,
@@ -3104,7 +3151,7 @@ function ProjectCanvasFlow({
       {/* Pane Context Menu */}
       {paneContextMenu && (
         <div
-          className="fixed z-50 bg-card border border-border rounded-lg py-2 w-48"
+          className="fixed z-50 bg-card border border-border rounded-lg w-48"
           style={{
             left: paneContextMenu.x,
             top: paneContextMenu.y,
@@ -3115,10 +3162,10 @@ function ProjectCanvasFlow({
               setNewProjectModal({ isOpen: true });
               handleClosePaneContextMenu();
             }}
-            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer"
+            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer text-sm font-normal rounded-none rounded-t-lg"
           >
             <Plus className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-foreground">Create New Project</span>
+            <span className="text-foreground">Create New Project</span>
           </button>
           <button
             onClick={() => {
@@ -3126,10 +3173,10 @@ function ProjectCanvasFlow({
               paneContextMenu.position && createContainer(paneContextMenu.position);
               handleClosePaneContextMenu();
             }}
-            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer"
+            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors cursor-pointer text-sm font-normal rounded-none rounded-b-lg"
           >
             <Container className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-foreground">Add Container</span>
+            <span className="text-foreground">Add Container</span>
           </button>
         </div>
       )}
@@ -3173,8 +3220,9 @@ function ProjectCanvasFlow({
               scratchpadContextMenu.scratchpadCard && deleteScratchpadNode(scratchpadContextMenu.scratchpadCard.id);
               handleCloseScratchpadContextMenu();
             }}
-            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors text-destructive"
+            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors text-sm font-normal text-destructive"
           >
+            <Trash2 className="w-4 h-4 text-muted-foreground" />
             Delete scratchpad
           </button>
           <button
@@ -3182,8 +3230,9 @@ function ProjectCanvasFlow({
               scratchpadContextMenu.scratchpadCard && handleDetachNode(scratchpadContextMenu.scratchpadCard.id, 'scratchpadNode');
               handleCloseScratchpadContextMenu();
             }}
-            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors text-foreground"
+            className="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-accent transition-colors text-sm font-normal text-foreground"
           >
+            <Unlink className="w-4 h-4 text-muted-foreground" />
             Detach from project
           </button>
         </div>
